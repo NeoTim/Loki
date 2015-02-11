@@ -185,7 +185,7 @@ class mod_class(object):
 
             class SpoofNode_(urwid.TreeNode):
                 def load_widget(self):
-                    return SpoofWidget(self)
+                    return SpoofWidget_(self)
             self.SpoofNode = SpoofNode_
 
             class SpoofParentNode_(urwid.ParentNode):
@@ -210,6 +210,7 @@ class mod_class(object):
         self.macs = None
         self.mac = None
         self.spoof_delay = 30
+        self.forward_constrain = "a=True"
     
     def start_mod(self):
         self.spoof_thread = spoof_thread(self)
@@ -433,7 +434,7 @@ class mod_class(object):
                                              "callback" : self.urw_spoof_activated,
                                              "args"     : str(spoofs) 
                                              })
-        self.pile.contents[1] = (urwid.LineBox(urwid.TreeListBox(urwid.TreeWalker(SpoofParentNode(self.spoof_tree)))), ('weight', 1))
+        self.pile.contents[1] = (urwid.LineBox(urwid.TreeListBox(urwid.TreeWalker(self.SpoofParentNode(self.spoof_tree)))), ('weight', 1))
         
     def urw_ping_activated(self, button):
         self.scan()
@@ -532,10 +533,16 @@ class mod_class(object):
                 (ip, random_mac, iter, reply) = self.hosts[h]
                 if mac == random_mac:
                     return
+            ip = dnet.ip6_ntoa(ip6.src)
+            if ip == "::":
+                return            
             rand_mac = [ 0x00, random.randint(0x00, 0xff), random.randint(0x00, 0xff), random.randint(0x00, 0xff), random.randint(0x00, 0xff), random.randint(0x00, 0xff) ]
             rand_mac = ':'.join(map(lambda x: "%02x" % x, rand_mac))
             if self.ui == 'gtk':
-                iter = self.hosts_liststore.append([mac, dnet.ip6_ntoa(ip6.src), "", self.mac_to_vendor(mac)])
+                iter = self.hosts_liststore.append([mac, ip, "", self.mac_to_vendor(mac)])
+            elif self.ui == 'urw':
+                self.hostlist.append(self.parent.menu_button("%s(%s) - %s" % (mac, self.mac_to_vendor(mac), ip), self.urw_hostlist_activated, mac))
+                iter = None
             self.hosts[mac] = (dnet.ip6_ntoa(ip6.src), rand_mac, iter, False)
             if self.ui == 'gtk':
                 self.mappings_liststore.append([mac, rand_mac])
@@ -545,7 +552,13 @@ class mod_class(object):
 
     def check_eth(self, eth):
         if eth.type == dpkt.ethernet.ETH_TYPE_IP6:
-            return (True, False)
+            ip6 = dpkt.ip6.IP6(str(eth.data))
+            a = False
+            exec(self.forward_constrain)
+            if a:
+                return (True, False)
+            else:
+                return (False, False)
         return (False, False)
 
     def input_eth(self, eth, timestamp):
@@ -556,7 +569,7 @@ class mod_class(object):
             (ip, rand_mac, iter, reply) = self.hosts[h]
             if src == h:
                 eth.src = dnet.eth_aton(rand_mac)
-                ref_src = ip
+                ref_src = h
                 if good:
                     self.dnet.send(str(eth))
                     if self.ui == 'gtk':
@@ -566,7 +579,7 @@ class mod_class(object):
                     good = True
             if dst == rand_mac:
                 eth.dst = dnet.eth_aton(h)
-                ref_dst = ip
+                ref_dst = h
                 if good:
                     self.dnet.send(str(eth))
                     if self.ui == 'gtk':
@@ -697,38 +710,9 @@ class mod_class(object):
                                         type=dpkt.ethernet.ETH_TYPE_IP6
                                         )
         self.dnet.send(str(eth))
-
-    # SIGNALS #
-
-    def on_add_upper_button_clicked(self, data):
-        select = self.hosts_treeview.get_selection()
-        (model, paths) = select.get_selected_rows()
-        for i in paths:
-            host = model.get_value(model.get_iter(i), 0)
-            if host not in self.upper_add:
-                if host not in self.lower_add:
-                    (ip, rand_mac, iter, reply) = self.hosts[host]
-                    iter = self.upper_add_liststore.append([host, ip])
-                    self.upper_add[host] = (ip, rand_mac, iter)
-
-    def on_add_lower_button_clicked(self, data):
-        select = self.hosts_treeview.get_selection()
-        (model, paths) = select.get_selected_rows()
-        for i in paths:
-            host = model.get_value(model.get_iter(i), 0)
-            if host not in self.upper_add:
-                if host not in self.lower_add:
-                    (ip, rand_mac, iter, reply) = self.hosts[host]
-                    iter = self.lower_add_liststore.append([host, ip])
-                    self.lower_add[host] = (ip, rand_mac, iter)
-
-    def on_add_spoof_button_clicked(self, data):
-        if not len(self.upper_add):
-            return
-        if not len(self.lower_add):
-            return
-        parent = self.spoof_treestore.append(None, [self.offline, "%i spoofs" % (len(self.upper_add) * len(self.lower_add)), None, None])
-        cur = self.spoof_treestore.get_string_from_iter(parent)
+    
+    
+    def add_spoof(self):
         data = []
         org_data = []
         hosts = []
@@ -736,7 +720,6 @@ class mod_class(object):
             (ip_upper, rand_mac_upper, iter_upper) = self.upper_add[host_upper]
             for host_lower in self.lower_add:
                 (ip_lower, rand_mac_lower, iter_lower) = self.lower_add[host_lower]
-                self.spoof_treestore.append(parent, [None, ip_upper, ip_lower, "0"])
                 
                 advert = struct.pack("!I16sBB6s", 0x60000000, dnet.ip6_aton(ip_upper), 2, 1, dnet.eth_aton(rand_mac_upper))
                 icmp6 = dpkt.icmp6.ICMP6(   type=dpkt.icmp6.ND_NEIGHBOR_ADVERT,
@@ -898,9 +881,46 @@ class mod_class(object):
                                             )
             self.dnet.send(str(eth))
             self.log("ICMP6: Joined multicast group " + dnet.ip6_ntoa(dnet.ip6_aton("ff02::1:ff00:0000")[:13] + dnet.ip6_aton(ip_lower)[13:]))
-        self.spoofs[cur] = (False, data, org_data, hosts)
         self.upper_add = {}
         self.lower_add = {}
+        return (data, org_data, hosts)
+
+    # SIGNALS #
+
+    def on_add_upper_button_clicked(self, data):
+        select = self.hosts_treeview.get_selection()
+        (model, paths) = select.get_selected_rows()
+        for i in paths:
+            host = model.get_value(model.get_iter(i), 0)
+            if host not in self.upper_add:
+                if host not in self.lower_add:
+                    (ip, rand_mac, iter, reply) = self.hosts[host]
+                    iter = self.upper_add_liststore.append([host, ip])
+                    self.upper_add[host] = (ip, rand_mac, iter)
+
+    def on_add_lower_button_clicked(self, data):
+        select = self.hosts_treeview.get_selection()
+        (model, paths) = select.get_selected_rows()
+        for i in paths:
+            host = model.get_value(model.get_iter(i), 0)
+            if host not in self.upper_add:
+                if host not in self.lower_add:
+                    (ip, rand_mac, iter, reply) = self.hosts[host]
+                    iter = self.lower_add_liststore.append([host, ip])
+                    self.lower_add[host] = (ip, rand_mac, iter)
+
+    def on_add_spoof_button_clicked(self, data):
+        if not len(self.upper_add):
+            return
+        if not len(self.lower_add):
+            return
+        parent = self.spoof_treestore.append(None, [self.offline, "%i spoofs" % (len(self.upper_add) * len(self.lower_add)), None, None])
+        cur = self.spoof_treestore.get_string_from_iter(parent)
+        for host_upper in self.upper_add:
+            for host_lower in self.lower_add:
+                self.spoof_treestore.append(parent, [None, host_upper, host_lower, "0"])
+        (data, org_data, hosts) = self.add_spoof()
+        self.spoofs[cur] = (False, data, org_data, hosts)
         self.upper_add_liststore.clear()
         self.lower_add_liststore.clear()
 
@@ -971,9 +991,15 @@ class mod_class(object):
                                         "type" : "int",
                                         "min" : 1,
                                         "max" : 100
-                                        }
+                                        },
+                    "forward_constrain" :   {   "value" :   self.forward_constrain,
+                                                "type"  :   "str",
+                                                "min"   :   0,
+                                                "max"   :   10000
+                                                }
                     }
 
     def set_config_dict(self, dict):
         if dict:
             self.spoof_delay = dict["spoof_delay"]["value"]
+            self.forward_constrain = dict["forward_constrain"]["value"]
