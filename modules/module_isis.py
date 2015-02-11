@@ -374,10 +374,6 @@ class isis_thread(threading.Thread):
         if not self.parent.auth is None and not self.parent.auth_secret is None:
             if self.parent.auth.auth_type == isis_tlv_authentication.AUTH_TYPE_HMAC_MD5:
                 local = copy.deepcopy(pdu)
-                #~ import pprint
-                #~ print "#" * 80
-                #~ pprint.pprint(local)                
-                #~ print "#" * 80
                 if local.pdu_type == isis_pdu_header.TYPE_L1_HELLO or local.pdu_type == isis_pdu_header.TYPE_L2_HELLO:
                     pass #does cisco auth hellos with hmac?
                 elif local.pdu_type == isis_pdu_header.TYPE_L1_LINK_STATE or local.pdu_type == isis_pdu_header.TYPE_L2_LINK_STATE:
@@ -388,6 +384,8 @@ class isis_thread(threading.Thread):
                     mac.update(local.render())
                     get_tlv(pdu, isis_tlv.TYPE_AUTHENTICATION).digest = struct.pack("!16s", mac.digest())
                 elif local.pdu_type == isis_pdu_header.TYPE_L1_COMPLETE_SEQUENCE or local.pdu_type == isis_pdu_header.TYPE_L2_COMPLETE_SEQUENCE:
+                    local.lifetime = 0
+                    local.checksum = "\x00\x00"
                     get_tlv(local, isis_tlv.TYPE_AUTHENTICATION).digest = None
                     mac = hmac.new(self.parent.auth_secret)
                     mac.update(local.render())
@@ -426,7 +424,7 @@ class isis_thread(threading.Thread):
         protos = ""
         if "ip" in dir(self.parent) and not self.parent.ip is None:
             protos += "\xcc" #IP
-        if "ip6_ll" in dir(self.parent) and not self.parent.ip is None:
+        if "ip6_ll" in dir(self.parent) and not self.parent.ip6_ll is None:
             protos += "\x8e" #IP6
         local_net = IPy.IP("%s/%s" % (dnet.ip_ntoa(self.parent.ip), dnet.ip_ntoa(self.parent.mask)), make_net=True)
         ip_int_reach = "%s%s%s" % (struct.pack("!BBBB", 0x0a, 0x80, 0x80, 0x80),
@@ -563,14 +561,17 @@ class isis_thread(threading.Thread):
                         #we are DR
                         for n in self.parent.neighbors:
                             cur = self.parent.neighbors[n]
+                            rem = []
                             for l in cur["lsps"]:
                                 lsp = cur["lsps"][l]["lsp"]
                                 if lsp.lifetime > 10:
                                     lsp.lifetime -= 10
                                 else:
                                     lsp.lifetime = 0
-                                    del cur["lsps"][l]
-                                entries += [struct.pack("!H8sIH", lsp.lifetime, lsp.lsp_id, lsp.sequence, lsp.checksum)]
+                                    rem.append(l)
+                            for l in rem:
+                                del cur["lsps"][l]
+                                entries += [struct.pack("!H8sI2s", lsp.lifetime, lsp.lsp_id, lsp.sequence, lsp.checksum)]
                         
                         entries = "".join(sorted(set(entries)))
                         tlvs = [ isis_tlv(isis_tlv.TYPE_LSP_ENTRIES, entries) ]
