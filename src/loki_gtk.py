@@ -1649,7 +1649,7 @@ class loki_gtk(loki.codename_loki):
             else:
                 self.notebook.insert_page(root, gtk.Label(mod.name), -1)        
         if self.run_togglebutton.get_active():
-            self.start_module(module)
+            self.start_module(mod)
             root.set_property("sensitive", True)
         else:
             root.set_property("sensitive", False)
