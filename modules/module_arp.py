@@ -571,7 +571,7 @@ class mod_class(object):
             (ip, rand_mac, iter, reply) = self.hosts[h]
             if src == h:
                 eth.src = dnet.eth_aton(rand_mac)
-                ref_src = ip
+                ref_src = h
                 if good:
                     self.dnet.send(str(eth))
                     if self.ui == 'gtk':
@@ -581,7 +581,7 @@ class mod_class(object):
                     good = True
             if dst == rand_mac:
                 eth.dst = dnet.eth_aton(h)
-                ref_dst = ip
+                ref_dst = h
                 if good:
                     self.dnet.send(str(eth))
                     if self.ui == 'gtk':
