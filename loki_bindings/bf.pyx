@@ -96,17 +96,17 @@ cdef class bf:
         cdef bf_error err
         cdef char *data
         cdef unsigned length
-        err = bf_get_wordlist(self.state, &data)
+        err = bf_get_wordlist(self.state, <const char **>&data)
         if err > 0:
             raise RuntimeError(self.error_to_str[err])
         if not data is NULL:
             free(data)
-        err = bf_get_pre_data(self.state, &data, &length)
+        err = bf_get_pre_data(self.state, <const char **>&data, &length)
         if err > 0:
             raise RuntimeError(self.error_to_str[err])
         if not data is NULL:
             free(data)
-        err = bf_get_hash_data(self.state, &data, &length)
+        err = bf_get_hash_data(self.state, <const char **>&data, &length)
         if err > 0:
             raise RuntimeError(self.error_to_str[err])
         if not data is NULL:
@@ -151,7 +151,7 @@ cdef class bf:
             cdef bf_error err
             cdef char *data
             length = len(new_data)
-            err = bf_get_wordlist(self.state, &data)
+            err = bf_get_wordlist(self.state, <const char **>&data)
             if err > 0:
                 raise RuntimeError(self.error_to_str[err])
             if not data is NULL:
@@ -165,7 +165,7 @@ cdef class bf:
         def __get__(self):
             cdef bf_error err
             cdef char *wordlist
-            err = bf_get_wordlist(self.state, &wordlist)
+            err = bf_get_wordlist(self.state, <const char **>&wordlist)
             if err > 0:
                 raise RuntimeError(self.error_to_str[err])
             if wordlist is NULL:
@@ -203,15 +203,15 @@ cdef class bf:
 
     property pre_data:
         def __set__(self, str new_data):
-            self.generic_set(&bf_get_pre_data, &bf_set_pre_data, new_data)
+            self.generic_set(<get_fun_t>&bf_get_pre_data, <set_fun_t>&bf_set_pre_data, new_data)
         def __get__(self):
-            self.generic_get(&bf_get_pre_data)
+            self.generic_get(<get_fun_t>&bf_get_pre_data)
     
     property hash_data:
         def __set__(self, str new_data):
-            self.generic_set(&bf_get_hash_data, &bf_set_hash_data, new_data)
+            self.generic_set(<get_fun_t>&bf_get_hash_data, <set_fun_t>&bf_set_hash_data, new_data)
         def __get__(self):
-            self.generic_get(&bf_get_hash_data)
+            self.generic_get(<get_fun_t>&bf_get_hash_data)
     
     property running:
         def __get__(self):
@@ -289,7 +289,7 @@ cdef class tacacs_bf(bf):
         cdef bf_error err
         cdef char *data
         cdef unsigned length
-        err = tacacs_bf_get_ciphertext(self.state, &data, &length)
+        err = tacacs_bf_get_ciphertext(self.state, <const char **>&data, &length)
         if err > 0:
             raise RuntimeError(self.error_to_str[err])
         if not data is NULL:
@@ -297,9 +297,9 @@ cdef class tacacs_bf(bf):
     
     property ciphertext:
         def __set__(self, str new_data):
-            self.generic_set(&tacacs_bf_get_ciphertext, &tacacs_bf_set_ciphertext, new_data)
+            self.generic_set(<get_fun_t>&tacacs_bf_get_ciphertext, <set_fun_t>&tacacs_bf_set_ciphertext, new_data)
         def __get__(self):
-            self.generic_get(&tacacs_bf_get_ciphertext)
+            self.generic_get(<get_fun_t>&tacacs_bf_get_ciphertext)
         
 cdef extern from "bf/tcpmd5.h":
     bf_error tcpmd5_bf_state_new(bf_state_t **)
