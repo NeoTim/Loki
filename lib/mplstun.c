@@ -32,7 +32,7 @@
  *      OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "lib/mplstun.h"
+#include <mplstun.h>
 
 long read_label(void *pos, int *exp, int* bos, int* ttl) {
     long label = ntohl(*((unsigned *) pos) & htonl(0xfffff000)) >> 12;
@@ -151,7 +151,7 @@ int mplstun_v(tun_mode mode, char *in_device, char *out_device, uint16_t in_labe
 
     tun_fd = tun_alloc(mode, tun_device);
     if (tun_fd < 0) {
-        fprintf(stderr, "Couldnt't create tunnel device: %d\n", strerror(errno));
+        fprintf(stderr, "Couldnt't create tunnel device: %s\n", strerror(errno));
         return 2;
     }
     if (verbose)
@@ -277,7 +277,7 @@ int mplstun_v(tun_mode mode, char *in_device, char *out_device, uint16_t in_labe
                     //
                 }*/
 
-                write(tun_fd, out, l);
+                l = write(tun_fd, out, l);
             } else {
                 fprintf(stderr, "Error on reading from pcap interface  %s\n", pcap_geterr(pcap_handle));
                 return 2;

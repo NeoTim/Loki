@@ -36,7 +36,10 @@
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
-#include <sys/stat.h>
+#include <time.h>
+#ifdef BF_USE_LOCKFILE
+ #include <sys/stat.h>
+#endif
 
 #include <pthread.h>
 
@@ -61,7 +64,7 @@ static short int inc_brute_pw_r(char *cur, int pos) {
 }
 
 static short inc_brute_pw(char *cur, int pos, bf_mode mode) {    
-    if(mode == BF_ALPHANUM)
+    if(mode == BF_FULL)
         return inc_brute_pw_r(cur, pos);
 
     if(cur[pos] == 0) {
@@ -98,21 +101,23 @@ static short inc_brute_pw(char *cur, int pos, bf_mode mode) {
 }
  
 bf_error bf_state_new(bf_state_t **new) {
-    if(new == NULL)
-        return BF_ERR_INVALID_ARGUMENT;
+    BF_CHECK_NULL(new);
+    
     (*new) = malloc(sizeof(bf_state_t));
     if((*new) == NULL)
         return BF_ERR_NO_MEM;
-    (*new)->wordlist = "\0";
+    (*new)->wordlist = NULL;
     (*new)->f_wordlist = NULL;
     (*new)->mode = BF_ALPHANUM;
     (*new)->num_threads = BF_DFLT_NO_THREADS;
 #ifdef BF_USE_LOCKFILE
-    (*new)->lockfile = "\0";
+    (*new)->lockfile = NULL;
 #endif
-    (*new)->pre_data = "\0";
+    (*new)->pre_data = NULL;
+    (*new)->pre_data_len = 0;
     (*new)->pre_hash_func = NULL;
-    (*new)->hash_data = "\0";
+    (*new)->hash_data = NULL;
+    (*new)->hash_data_len = 0;
     (*new)->hash_func = NULL;
     if(pthread_mutex_init(&(*new)->mutex, NULL) != 0) {
         free((*new));
@@ -120,7 +125,7 @@ bf_error bf_state_new(bf_state_t **new) {
         return BF_ERR_PTHREAD;
     }
     (*new)->threads = NULL;
-    memset((*new)->brute_pw, 0, BF_MAX_BRUTE_PW_LEN+1);
+    (*new)->brute_pw = (char *) malloc(sizeof(char) * BF_MAX_BRUTE_PW_LEN+1);
     (*new)->pw = NULL;
     (*new)->running = 0;
     (*new)->proto_data = NULL;
@@ -137,6 +142,7 @@ bf_error bf_state_delete(bf_state_t *old) {
     if(old->threads != NULL) {
         free(old->threads);
     }
+    free(old->brute_pw);
     if(old->pw != NULL) {
         free(old->pw);
     }
@@ -146,6 +152,9 @@ bf_error bf_state_delete(bf_state_t *old) {
         } else {
             free(old->proto_data);
         }
+    }
+    if(old->f_wordlist != NULL) {
+        fclose(old->f_wordlist);
     }
     free(old);
     return BF_SUCCESS;
@@ -195,7 +204,6 @@ bf_error bf_set_pre_hash_func(bf_state_t *state, pre_hash_func_t *pre_hash_func)
     return BF_SUCCESS;
 }
 
-
 bf_error bf_set_hash_data(bf_state_t *state, const char *hash_data, unsigned hash_data_len) {
     BF_CHECK_NULL(state);
     BF_CHECK_RUNNING(state);
@@ -219,20 +227,107 @@ bf_error bf_set_proto_data(bf_state_t *state, void *proto_data, delete_proto_dat
     return BF_SUCCESS;
 }
 
+bf_error bf_get_wordlist(bf_state_t *state, const char **wordlist) {
+    BF_CHECK_NULL(state);
+    BF_CHECK_NULL(wordlist);
+    *wordlist = state->wordlist;
+    return BF_SUCCESS;
+}
+
+bf_error bf_get_mode(bf_state_t *state, bf_mode *mode) {
+    BF_CHECK_NULL(state);
+    BF_CHECK_NULL(mode);
+    *mode = state->mode;
+    return BF_SUCCESS;
+}
+
+bf_error bf_get_num_threads(bf_state_t *state, unsigned *num_threads) {
+    BF_CHECK_NULL(state);
+    BF_CHECK_NULL(num_threads);
+    *num_threads = state->num_threads;
+    return BF_SUCCESS;
+}
+
+#ifdef BF_USE_LOCKFILE
+bf_error bf_get_lockfile(bf_state_t *state, const char **lockfile) {
+    BF_CHECK_NULL(state);
+    BF_CKECK_NULL(lockfile);
+    *lockfile = state->lockfile;
+    return BF_SUCCESS;
+}
+
+#endif
+bf_error bf_get_pre_data(bf_state_t *state, const char **pre_data, unsigned *pre_data_len) {
+    BF_CHECK_NULL(state);
+    BF_CHECK_NULL(pre_data);
+    BF_CHECK_NULL(pre_data_len);
+    *pre_data = state->pre_data;
+    *pre_data_len = state->pre_data_len;
+    return BF_SUCCESS;
+}
+
+bf_error bf_get_pre_hash_func(bf_state_t *state, pre_hash_func_t **pre_hash_func) {
+    BF_CHECK_NULL(state);
+    BF_CHECK_NULL(pre_hash_func);
+    *pre_hash_func = state->pre_hash_func;
+    return BF_SUCCESS;
+}
+
+bf_error bf_get_hash_data(bf_state_t *state, const char **hash_data, unsigned *hash_data_len) {
+    BF_CHECK_NULL(state);
+    BF_CHECK_NULL(hash_data);
+    BF_CHECK_NULL(hash_data_len);
+    *hash_data = state->hash_data;
+    *hash_data_len = state->hash_data_len;
+    return BF_SUCCESS;
+}
+
+bf_error bf_get_hash_func(bf_state_t *state, hash_func_t **hash_func) {
+    BF_CHECK_NULL(state);
+    BF_CHECK_NULL(hash_func);
+    *hash_func = state->hash_func;
+    return BF_SUCCESS;
+}
+
+bf_error bf_get_proto_data(bf_state_t *state, void **proto_data, delete_proto_data_t **delete_proto_data_func) {
+    BF_CHECK_NULL(state);
+    BF_CHECK_NULL(proto_data);
+    BF_CHECK_NULL(delete_proto_data_func);
+    *proto_data = state->proto_data;
+    *delete_proto_data_func = state->delete_proto_data_func;
+    return BF_SUCCESS;
+}
+
 static void *thread_wordlist(void *arg) {
-    bf_state_t *state = (bf_state_t *) arg;
-    int len;
-    int count = 0;
+    bf_thread_t *thread = (bf_thread_t *) arg;
+    bf_state_t *state = thread->state;
+    unsigned no = thread->thread_no;
+    size_t len;
     char line[512];
     char *ret;
+#ifdef BF_USE_LOCKFILE
+    int count = 0;
     FILE  *lock;
     struct stat fcheck;
+#endif
+    free(thread);
     
+    if(feof(state->f_wordlist)) {
+#ifdef BF_USE_LOCKFILE
+            remove(state->lockfile);
+#endif
+        state->running = 0;
+        pthread_exit(NULL);
+    }
     pthread_mutex_lock(&state->mutex);
     ret = fgets(line, 512, state->f_wordlist);
     pthread_mutex_unlock(&state->mutex);
     
-    while(ret) {
+    while(ret
+#ifndef BF_USE_LOCKFILE
+           && state->running
+#endif
+           ) {
         char *tmp = strchr(line, '\n');
         if(tmp)
             *tmp = '\0';
@@ -250,28 +345,38 @@ static void *thread_wordlist(void *arg) {
                     //fprintf(stderr, "Cant open lockfile: %s\n", strerror(errno));
                     pthread_exit(NULL);
                 }
-                fprintf(lock, "%s", state->brute_pw);
+                fprintf(lock, "%s", line);
                 fclose(lock);
             }
             count = 0;
         }
-#else
-        if(!state->running) {
-            pthread_exit(NULL);
-        }
 #endif
-          
+        //~ printf("'%s'\n", line);
         if(state->hash_func(state->proto_data, line, state->hash_data, state->hash_data_len)) {
-            state->pw = (char *) malloc(sizeof(char) * strlen(line));
-            memcpy(state->pw, line, strlen(line));
 #ifdef BF_USE_LOCKFILE
             remove(state->lockfile);
 #endif
-            state->running = 0;
+            pthread_mutex_lock(&state->mutex);
+            if(state->running) {
+                state->running = 0;
+                len = strlen(line);
+                state->pw = (char *) malloc(sizeof(char) * (len + 1));
+                memcpy(state->pw, line, len);
+                state->pw[len] = '\0';
+            }
+            pthread_mutex_unlock(&state->mutex);
             pthread_exit((void *) 1);
         }
-        
+#ifdef BF_USE_LOCKFILE
         count++;
+#endif
+        if(state->running && feof(state->f_wordlist)) {
+#ifdef BF_USE_LOCKFILE
+                remove(state->lockfile);
+#endif
+            state->running = 0;
+            pthread_exit(NULL);
+        }
         pthread_mutex_lock(&state->mutex);
         ret = fgets(line, 512, state->f_wordlist);
         pthread_mutex_unlock(&state->mutex);
@@ -280,17 +385,31 @@ static void *thread_wordlist(void *arg) {
 }
 
 static void *thread_bruteforce(void *arg) {
-    bf_state_t *state = (bf_state_t *) arg;
-    int count = 0, ret = 1;
+    bf_thread_t *thread = (bf_thread_t *) arg;
+    bf_state_t *state = thread->state;
+    unsigned no = thread->thread_no;
+    size_t len;
+    int ret = 1;
     char my_brute_pw[BF_MAX_BRUTE_PW_LEN+1];
+#ifdef BF_USE_LOCKFILE
+    int count = 0;
     FILE  *lock;
-    struct stat fcheck;    
+    struct stat fcheck;
+#endif
+    free(thread);
         
     pthread_mutex_lock(&state->mutex);
+    if(no > 0) {
+        ret = inc_brute_pw(state->brute_pw, 0, state->mode);
+    }
     memcpy(my_brute_pw, state->brute_pw, BF_MAX_BRUTE_PW_LEN+1);
     pthread_mutex_unlock(&state->mutex);
     
-    while (ret) {
+    while (ret
+#ifndef BF_USE_LOCKFILE
+           && state->running
+#endif
+           ) {
 #ifdef BF_USE_LOCKFILE
         if(count % BF_CHECK_FOR_LOCKFILE == 0) {
             if(stat(state->lockfile, &fcheck)) {
@@ -302,28 +421,32 @@ static void *thread_bruteforce(void *arg) {
                     //fprintf(stderr, "Cant open lockfile: %s\n", strerror(errno));
                     pthread_exit(NULL);
                 }
-                fprintf(lock, "%s", state->brute_pw);
+                fprintf(lock, "%s", my_brute_pw);
                 fclose(lock);
             }
             count = 0;
         }
-#else
-        if(!state->running) {
-            pthread_exit(NULL);
-        }
 #endif
-        
+        //~ printf("'%s'\n", my_brute_pw);
         if(state->hash_func(state->proto_data, my_brute_pw, state->hash_data, state->hash_data_len)) {
-            state->pw = (char *) malloc(sizeof(char) * strlen(my_brute_pw));
-            memcpy(state->pw, my_brute_pw, strlen(my_brute_pw));
 #ifdef BF_USE_LOCKFILE
             remove(state->lockfile);
 #endif
-            state->running = 0;
+            
+            pthread_mutex_lock(&state->mutex);
+            if(state->running) {
+                state->running = 0;
+                len = strlen(my_brute_pw);
+                state->pw = (char *) malloc(sizeof(char) * (len + 1));
+                memcpy(state->pw, my_brute_pw, len);
+                state->pw[len] = '\0';
+            }
+            pthread_mutex_unlock(&state->mutex);
             pthread_exit((void *) 1);
         }
-        
+#ifdef BF_USE_LOCKFILE
         count++;
+#endif
         pthread_mutex_lock(&state->mutex);
         ret = inc_brute_pw(state->brute_pw, 0, state->mode);
         memcpy(my_brute_pw, state->brute_pw, BF_MAX_BRUTE_PW_LEN+1);
@@ -334,25 +457,35 @@ static void *thread_bruteforce(void *arg) {
 
 bf_error bf_start(bf_state_t *state) {
     void *(*thread_func)(void *);
+    bf_thread_t *thread;
     int i;
 
     BF_CHECK_NULL(state);
     BF_CHECK_RUNNING(state);
     
     state->running = 1;
-    state->pre_hash_func(state->proto_data, state->pre_data, state->pre_data_len);
+    if(state->pre_hash_func != NULL) {
+        state->pre_hash_func(state->proto_data, state->pre_data, state->pre_data_len);
+    }
     state->threads = (pthread_t *) malloc(sizeof(pthread_t) * state->num_threads);
 
     if(state->mode == BF_WORDLIST) {
+        state->f_wordlist = fopen(state->wordlist, "r");
+        BF_CHECK_NULL(state->f_wordlist);
         thread_func = thread_wordlist;
-    }
-    else {
+    } else {
         memset(state->brute_pw, 0, BF_MAX_BRUTE_PW_LEN+1);
         thread_func = thread_bruteforce;
     }
 
     for(i = 0; i < state->num_threads; i++) {
-        pthread_create(&state->threads[i], NULL, thread_func, (void *) state);
+        thread = (bf_thread_t *) malloc(sizeof(bf_thread_t));
+        thread->state = state;
+        thread->thread_no = i;
+        pthread_create(&state->threads[i], NULL, thread_func, (void *) thread);
+        if(i == 0) {
+            usleep(10);
+        }
     }
     
     return BF_SUCCESS;
@@ -368,7 +501,6 @@ bf_error bf_stop(bf_state_t *state) {
     int i;
     
     BF_CHECK_NULL(state);
-    BF_CHECK_RUNNING(state);
     
     state->running = 0;
 #ifdef BF_USE_LOCKFILE
@@ -380,6 +512,10 @@ bf_error bf_stop(bf_state_t *state) {
     }
     free(state->threads);
     state->threads = NULL;
+    if(state->f_wordlist) {
+        fclose(state->f_wordlist);
+        state->f_wordlist = NULL;
+    }
     
     return BF_SUCCESS;
 }
@@ -390,8 +526,9 @@ bf_error bf_get_secret(bf_state_t *state, char **out) {
     
     if(out == NULL)
         return BF_ERR_INVALID_ARGUMENT;
+    if(state->pw == NULL)
+        return BF_ERR_NOT_FOUND;
     
     *out = state->pw;
-    
     return BF_SUCCESS;
 }

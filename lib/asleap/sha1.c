@@ -15,23 +15,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-
-#ifdef HAVE_ENDIAN_H
-#include <endian.h>
-# if __BYTE_ORDER == __BIG_ENDIAN
-#  define WORDS_BIGENDIAN
-# endif
-#else
-# ifdef HAVE_SYS_ENDIAN_H
-#  include <sys/endian.h>
-#  if _BYTE_ORDER == _BIG_ENDIAN
-#   define WORDS_BIGENDIAN
-#  endif
-# else
-#   warning "Assuming little-endian for Windows"
-# endif
-#endif
-
+#include <config.h>
 
 #include "common.h"
 #include "sha1.h"

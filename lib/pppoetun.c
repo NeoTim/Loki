@@ -34,7 +34,7 @@
 
 #include <arpa/inet.h>
 
-#include "pppoetun.h"
+#include <pppoetun.h>
 
 int tun_alloc(char *tun_device) {
     int fd = -1;
@@ -249,7 +249,7 @@ int pppoetun_v(char *in_device, char *out_device, uint16_t session_id, char *in_
                     printf("p");
                     fflush(stdout);
                 }
-                write(tun_fd, start, l);
+                l = write(tun_fd, start, l);
             } else {
                 fprintf(stderr, "Error on reading from pcap interface  %s\n", pcap_geterr(pcap_handle));
                 return 2;

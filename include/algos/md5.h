@@ -50,6 +50,14 @@
 #ifndef md5_INCLUDED
 #  define md5_INCLUDED
 
+#include <config.h>
+
+#ifdef WORDS_BIGENDIAN
+# define ARCH_IS_BIG_ENDIAN 1
+#else
+# define ARCH_IS_BIG_ENDIAN 0
+#endif
+
 /*
  * This package supports both compile-time and run-time determination of CPU
  * byte order.  If ARCH_IS_BIG_ENDIAN is defined as 0, the code will be

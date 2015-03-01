@@ -1052,43 +1052,53 @@ class ospf_thread(threading.Thread):
         self.running = False
 
 class ospf_md5bf(threading.Thread):
-    def __init__(self, parent, iter, bf, full, wl, digest, data):
+    def __init__(self, parent, iter, digest, data):
         self.parent = parent
         self.iter = iter
-        self.bf = bf
-        self.full = full
-        self.wl = wl
         self.digest = digest
         self.data = data
+        self.obj = None
         threading.Thread.__init__(self)
 
     def run(self):
-        if self.bf and not self.wl:
-            self.wl = ""
-        #print "bf:%i full:%i, wl:%s digest:%s data:%s" % (self.bf, self.full, self.wl, self.digest.encode('hex'), self.data.encode('hex'))
-        (handle, self.tmpfile) = tempfile.mkstemp(prefix="ospf-md5-", suffix="-lock")
-        print self.tmpfile
-        os.close(handle)
         if self.parent.platform == "Windows":
-            import ospfmd5bf
-            pw = ospfmd5bf.bf(self.bf, self.full, self.wl, self.digest, self.data, self.tmpfile)
+            import bf
         else:
-            import loki_bindings
-            pw = loki_bindings.ospfmd5.ospfmd5bf.bf(self.bf, self.full, self.wl, self.digest, self.data, self.tmpfile)
-        if os.path.exists(self.tmpfile):
+            from loki_bindings import bf
+        l = self.parent.parent
+        self.obj = bf.ospf_md5_bf()
+        self.obj.num_threads = l.bruteforce_threads
+        if not l.bruteforce:
+            self.obj.mode = bf.MODE_WORDLIST
+            self.obj.wordlist = l.wordlist
+        else:
+            if not l.bruteforce_full:
+                self.obj.mode = bf.MODE_ALPHANUM
+            else:
+                self.obj.mode = bf.MODE_FULL
+        self.obj.pre_data = self.data
+        self.obj.hash_data = self.digest
+        
+        self.obj.start()
+        while self.obj.running:
+            time.sleep(0.01)
+        
+        #if self.parent.ui == 'gtk':
+        with gtk.gdk.lock:
             if self.parent.neighbor_liststore.iter_is_valid(self.iter):
                 src = self.parent.neighbor_liststore.get_value(self.iter, self.parent.NEIGH_IP_ROW)
-                if pw != None:
-                    self.parent.neighbor_liststore.set_value(self.iter, self.parent.NEIGH_CRACK_ROW, pw)
-                    self.parent.log("OSPF: Found password '%s' for host %s" % (pw, src))
+                if not self.obj.pw is None:
+                    self.parent.neighbor_liststore.set_value(self.iter, self.parent.NEIGH_CRACK_ROW, self.obj.pw)
+                    self.parent.log("OSPF: Found password '%s' for host %s" % (self.obj.pw, src))
                 else:
                     self.parent.neighbor_liststore.set_value(self.iter, self.parent.NEIGH_CRACK_ROW, "NOT FOUND")
                     self.parent.log("OSPF: No password found for host %s" % (src))
-            os.remove(self.tmpfile)
-
+        self.obj = None
+        
     def quit(self):
-        if os.path.exists(self.tmpfile):
-            os.remove(self.tmpfile)
+        if not self.obj is None:
+            self.obj.stop()
+            self.obj = None
 
 ### MODULE_CLASS ###
 
@@ -1850,7 +1860,7 @@ class mod_class(object):
             hdr.parse(packet_str)
             digest = packet_str[hdr.len:hdr.len+16]
             data = packet_str[:12] + "\0\0" + packet_str[14:hdr.len]
-            thread = ospf_md5bf(self, iter, self.parent.bruteforce, self.parent.bruteforce_full, self.parent.wordlist, digest, data)
+            thread = ospf_md5bf(self, iter, digest, data)
             model.set_value(iter, self.NEIGH_CRACK_ROW, "RUNNING")
             thread.start()
             self.bf[ident] = thread

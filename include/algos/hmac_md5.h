@@ -5,17 +5,14 @@
 #ifndef hmac_md5_INCLUDED
 #define hmac_md5_INCLUDED
 
-#ifndef ARCH_IS_BIG_ENDIAN
-#define ARCH_IS_BIG_ENDIAN 0 
-#endif
-#include "md5.h"
+#include <algos/md5.h>
 
 #ifdef __cplusplus
 extern "C" 
 {
 #endif
 
-void hmac_md5(unsigned char* text, int text_len, unsigned char* key, int key_len, md5_byte_t* digest);
+void hmac_md5(const unsigned char* text, int text_len, const unsigned char* key, int key_len, md5_byte_t* digest);
 
 #ifdef __cplusplus
 }  /* end extern "C" */

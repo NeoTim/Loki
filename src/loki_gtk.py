@@ -1543,10 +1543,6 @@ class loki_gtk(loki.codename_loki):
     def __init__(self):
         loki.codename_loki.__init__(self)
         self.ui = 'gtk'
-        self.wordlist = None
-        self.bruteforce = True
-        self.bruteforce_full = False
-        self.bruteforce_threads = 4
 
 		#gtk stuff
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
@@ -1995,7 +1991,7 @@ class loki_gtk(loki.codename_loki):
     def destroy_event(self, widget, data=None):
         gtk.main_quit()
     
-    def error_callback(msg):
+    def error_callback(self, msg):
         dialog = gtk.MessageDialog(gtk.Window(gtk.WINDOW_TOPLEVEL), gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT, gtk.MESSAGE_ERROR, gtk.BUTTONS_OK, msg)
         ret = dialog.run()
         dialog.destroy()

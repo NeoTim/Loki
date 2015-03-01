@@ -35,6 +35,7 @@ import struct
 import tempfile
 import threading
 import hashlib
+import time
 
 import dnet
 import dpkt
@@ -239,57 +240,66 @@ class bfd_auth(object):
             self.data = data[8:self.length]
 
 class bfd_bf(threading.Thread):
-    def __init__(self, parent, ident, bf, full, wl, digest, data, threads):
+    def __init__(self, parent, ident, digest, data, threads):
         self.parent = parent
         self._ident = ident
-        self.bf = bf
-        self.full = full
-        self.wl = wl
         self.digest = digest
         packet = bfd_control_packet()
         packet.parse(data)
         self.data = packet.render(True)
         self.threads = threads
+        self.obj = None
         threading.Thread.__init__(self)
 
     def run(self):
-        if self.bf and not self.wl:
-            self.wl = ""
-        #print "bf:%i full:%i, wl:%s digest:%s data:%s" % (self.bf, self.full, self.wl, self.digest.encode('hex'), self.data.encode('hex'))
-        (handle, self.tmpfile) = tempfile.mkstemp(prefix="bfd-bf-", suffix="-lock")
-        print self.tmpfile
-        os.close(handle)
         if self.parent.platform == "Windows":
-            import bfdbf
-            pw = bfdbf.bfmd5(self.bf, self.full, self.wl, self.digest, self.data, self.tmpfile, self.threads)
+            import bf
         else:
-            import loki_bindings
-            pw = loki_bindings.bfd.bfdbf.bfmd5(self.bf, self.full, self.wl, self.digest, self.data, self.tmpfile, self.threads)
-        if os.path.exists(self.tmpfile):
-            if self.parent.ui == 'urw':
-                (iter, discrim, answer, dos, crack, data, _) = self.parent.neighbors[self._ident]
-                button = iter[0]
-                label = button.base_widget.get_label()
-                if pw != None:
-                    label += " PASS(%s)" % pw
-                else:
-                    label += " NO_PASSWORD_FOUND"
-                button.base_widget.set_label(label)
-                button.set_attr_map({None : "button normal"})
-                self.parent.neighbors[self._ident] = (iter, discrim, answer, dos, crack, data, pw)
-            #~ if self.parent.neighbor_liststore.iter_is_valid(self.iter):
-                #~ src = self.parent.neighbor_liststore.get_value(self.iter, self.parent.NEIGH_IP_ROW)
-                #~ if pw != None:
-                    #~ self.parent.neighbor_liststore.set_value(self.iter, self.parent.NEIGH_CRACK_ROW, pw)
-                    #~ self.parent.log("BFD: Found password '%s' for host %s" % (pw, src))
-                #~ else:
-                    #~ self.parent.neighbor_liststore.set_value(self.iter, self.parent.NEIGH_CRACK_ROW, "NOT FOUND")
-                    #~ self.parent.log("BFD: No password found for host %s" % (src))
-            os.remove(self.tmpfile)
+            from loki_bindings import bf
+        l = self.parent.parent
+        self.obj = bf.bfd_md5_bf()
+        self.obj.num_threads = l.bruteforce_threads
+        if not l.bruteforce:
+            self.obj.mode = bf.MODE_WORDLIST
+            self.obj.wordlist = l.wordlist
+        else:
+            if not l.bruteforce_full:
+                self.obj.mode = bf.MODE_ALPHANUM
+            else:
+                self.obj.mode = bf.MODE_FULL
+        self.obj.pre_data = self.data
+        self.obj.hash_data = self.digest
+
+        self.obj.start()
+        while self.obj.running:
+            time.sleep(0.01)        
+        
+        if self.parent.ui == 'urw':
+            (iter, discrim, answer, dos, crack, data, _) = self.parent.neighbors[self._ident]
+            button = iter[0]
+            label = button.base_widget.get_label()
+            if self.obj.pw != None:
+                label += " PASS(%s)" % self.obj.pw
+            else:
+                label += " NO_PASSWORD_FOUND"
+            button.base_widget.set_label(label)
+            button.set_attr_map({None : "button normal"})
+            self.parent.neighbors[self._ident] = (iter, discrim, answer, dos, crack, data, self.obj.pw)
+        elif self.parent.ui == 'gtk':
+            with gtk.gdk.lock:
+                if self.parent.neighbor_liststore.iter_is_valid(self.iter):
+                    src = self.parent.neighbor_liststore.get_value(self.iter, self.parent.NEIGH_IP_ROW)
+                    if self.obj.pw != None:
+                        self.parent.neighbor_liststore.set_value(self.iter, self.parent.NEIGH_CRACK_ROW, self.obj.pw)
+                        self.parent.log("BFD: Found password '%s' for host %s" % (self.obj.pw, src))
+                    else:
+                        self.parent.neighbor_liststore.set_value(self.iter, self.parent.NEIGH_CRACK_ROW, "NOT FOUND")
+                        self.parent.log("BFD: No password found for host %s" % (src))
 
     def quit(self):
-        if os.path.exists(self.tmpfile):
-            os.remove(self.tmpfile)
+        if not self.obj is None:
+            self.obj.stop()
+            self.obj = None
 
 class mod_class(object):
     NEIGH_SRC_ROW = 0
@@ -637,7 +647,7 @@ class mod_class(object):
             label = "%s - %s %s %s AUTH(%s)" % (src, dst, bfd_control_packet.state_to_str[packet.state], bfd_control_packet.diag_to_str[packet.diag], auth)
             button.base_widget.set_label(label)
             if self.ui == "urw":
-                crack = bfd_bf(self, ident, self.parent.bruteforce, self.parent.bruteforce_full, self.parent.wordlist, digest, data, self.parent.bruteforce_threads)
+                crack = bfd_bf(self, ident, digest, data, self.parent.bruteforce_threads)
             crack.start()
             iter[0].set_attr_map({None : "button select"})
         else:

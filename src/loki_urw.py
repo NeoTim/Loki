@@ -368,10 +368,6 @@ class loki_urw(loki.codename_loki):
         else:
             self.logfile = "/tmp/loki.log"
         self.logfd = open(self.logfile, 'w')
-        self.wordlist = None
-        self.bruteforce = True
-        self.bruteforce_full = False
-        self.bruteforce_threads = 4
     
     def main(self):
         loki.codename_loki.main(self)

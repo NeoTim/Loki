@@ -32,6 +32,7 @@
 import os
 import tempfile
 import threading
+import time
 
 import dpkt
 import dnet
@@ -41,46 +42,54 @@ gtk = None
 urwid = None
 
 class bgp_md5bf(threading.Thread):
-    def __init__(self, parent, iter, bf, full, wl, digest, data):
+    def __init__(self, parent, iter, digest, data):
         self.parent = parent
         self.iter = iter
-        self.bf = bf
-        self.full = full
-        self.wl = wl
         self.digest = digest
         self.data = data
-        self.running = True
+        self.obj = None
         threading.Thread.__init__(self)
 
     def run(self):
-        if self.bf and not self.wl:
-            self.wl = ""
-        (handle, self.tmpfile) = tempfile.mkstemp(prefix="tcp-md5-", suffix="-lock")
-        os.close(handle)
         if self.parent.platform == "Windows":
-            import tcpmd5bf
-            tcpmd5bf.bf(self.bf, self.full, self.wl, self.digest, self.data, self.tmpfile)
+            import bf
         else:
-            import loki_bindings
-            pw = loki_bindings.tcpmd5.tcpmd5bf.bf(self.bf, self.full, self.wl, self.digest, self.data, self.tmpfile)
-        if self.running:
-            if self.parent.ui == 'gtk':
+            from loki_bindings import bf
+        l = self.parent.parent
+        self.obj = bf.tcpmd5_bf()
+        self.obj.num_threads = l.bruteforce_threads
+        if not l.bruteforce:
+            self.obj.mode = bf.MODE_WORDLIST
+            self.obj.wordlist = l.wordlist
+        else:
+            if not l.bruteforce_full:
+                self.obj.mode = bf.MODE_ALPHANUM
+            else:
+                self.obj.mode = bf.MODE_FULL
+        self.obj.pre_data = self.data
+        self.obj.hash_data = self.digest
+        
+        self.obj.start()
+        while self.obj.running:
+            time.sleep(0.01)
+        
+        if self.parent.ui == 'gtk':
+            with gtk.gdk.lock:
                 src = self.parent.liststore.get_value(self.iter, self.parent.SOURCE_ROW)
                 dst = self.parent.liststore.get_value(self.iter, self.parent.DESTINATION_ROW)
-                if pw:
-                    self.parent.liststore.set_value(self.iter, self.parent.SECRET_ROW, pw)
-                    self.parent.log("TCP-MD5: Found password '%s' for connection %s->%s" % (pw, src, dst))
+                if not self.obj.pw is None:
+                    self.parent.liststore.set_value(self.iter, self.parent.SECRET_ROW, self.obj.pw)
+                    self.parent.log("TCP-MD5: Found password '%s' for connection %s->%s" % (self.obj.pw, src, dst))
                 else:
                     self.paren.liststore.set_value(self.iter, self.parent.SECRET_ROW, "NOT FOUND")
                     self.parent.log("TCP-MD5: No password found for connection %s->%s" % (src, dst))
-            if os.path.exists(self.tmpfile):
-                os.remove(self.tmpfile)
+        self.obj = None
 
     def quit(self):
-        self.running = False
-        if os.path.exists(self.tmpfile):
-            os.remove(self.tmpfile)
-
+        if not self.obj is None:
+            self.obj.stop()
+            self.obj = None
+    
 class mod_class(object):
     SOURCE_ROW = 0
     DESTINATION_ROW = 1
@@ -192,7 +201,7 @@ class mod_class(object):
             (iter, data, digest, thread) = self.opts[ident]
             if thread:
                 return
-            thread = bgp_md5bf(self, iter, self.parent.bruteforce, self.parent.bruteforce_full, self.parent.wordlist, digest, data)
+            thread = bgp_md5bf(self, iter, digest, data)
             model.set_value(iter, self.SECRET_ROW, "RUNNING")
             thread.start()
             self.opts[ident] = (iter, data, digest, thread)

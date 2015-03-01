@@ -1,7 +1,7 @@
 /*
- *      pppoetun.h
- *
- *      Copyright 2014 Daniel Mende <dmende@ernw.de>
+ *      tacacs.h
+ * 
+ *      Copyright 2015 Daniel Mende <dmende@ernw.de>
  */
 
 /*
@@ -32,70 +32,15 @@
  *      OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PPPOETUN_H
-#define PPPOETUN_H 1
+#include <bf.h>
+#include <algos/md5.h>
 
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <signal.h>
-#include <string.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
+typedef struct {
+    md5_state_t base;
+    const char *ciphertext;
+    unsigned ciphertext_len;
+} tacacs_data_t;
 
-#ifdef HAVE_NETINET_ETHER_H
- #include <netinet/ether.h>
- #define ETH_OCTET(x) ((x)->ether_addr_octet)
-#else
- #ifdef HAVE_NET_ETHERNET_H
-  #include <net/ethernet.h>
-  #define ETH_OCTET(x) ((x)->octet)
-  #ifndef ETH_ALEN
-   #define ETH_ALEN ETHER_ADDR_LEN
-  #endif
- #else
-  #error ### no usable ethernet header file found ###
- #endif
-#endif
-
-#ifdef HAVE_LINUX_IF_H
- #include <linux/if.h>
- #ifdef HAVE_LINUX_IF_TUN_H
-  #include <linux/if_tun.h>
-  #define USE_LINUX_TUN 1
- #else
-  #error ### linux/if_tun.h missing ###
- #endif
-#else
- #ifdef HAVE_NET_IF_H
-  #include <net/if.h>
-  #define USE_BSD_TUN 1
- #endif
-#endif
-
-
-#include <dnet.h>
-#include <pcap.h>
-
-#define READ_BUFFER_SIZE 1600
-#define WRITE_BUFFER_SIZE 1600
-#define PCAP_FILTER_LENGTH 1024
-#define TUN_DEV_NAME_LENGTH 32
-#define MAX_TUN_NR 100
-
-#define CHECK_FOR_LOCKFILE 1000
-#define TIMEOUT_SEC 1
-#define TIMEOUT_USEC 0
-
-#define max(a,b) ((a)>(b) ? (a):(b))
-#define min(a,b) ((a)>(b) ? (b):(a))
-
-extern int pppoetun(char *, char *, uint16_t, char *, char *, char *);
-extern int pppoetun_v(char *, char *, uint16_t, char *, char *, char *, int);
-
-#endif
+bf_error tacacs_bf_state_new(bf_state_t **);
+bf_error tacacs_bf_set_ciphertext(bf_state_t *, const char *, unsigned);
+bf_error tacacs_bf_get_ciphertext(bf_state_t *, const char **, unsigned *);

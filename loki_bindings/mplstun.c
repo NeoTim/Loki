@@ -36,7 +36,7 @@
 
 #include <string.h>
 
-#include "lib/mplstun.h"
+#include <mplstun.h>
 
 static PyObject *
 mpls_tun(PyObject *self, PyObject *args)

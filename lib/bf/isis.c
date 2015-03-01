@@ -1,7 +1,7 @@
 /*
- *      mplstun.h
- *
- *      Copyright 2010 Daniel Mende <dmende@ernw.de>
+ *      isis.c
+ * 
+ *      Copyright 2015 Daniel Mende <dmende@ernw.de>
  */
 
 /*
@@ -32,73 +32,48 @@
  *      OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef MPLSTUN_H
-#define MPLSTUN_H 1
-
-#include <errno.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <signal.h>
 #include <string.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
 
-#ifdef HAVE_NETINET_ETHER_H
- #include <netinet/ether.h>
- #define ETH_OCTET(x) ((x)->ether_addr_octet)
-#else
- #ifdef HAVE_NET_ETHERNET_H
-  #include <net/ethernet.h>
-  #define ETH_OCTET(x) ((x)->octet)
-  #ifndef ETH_ALEN
-   #define ETH_ALEN ETHER_ADDR_LEN
-  #endif
- #else
-  #error ### no usable ethernet header file found ###
- #endif
-#endif
+#include <bf/isis.h>
+#include <algos/hmac_md5.h>
 
-#ifdef HAVE_LINUX_IF_H
- #include <linux/if.h>
- #ifdef HAVE_LINUX_IF_TUN_H
-  #include <linux/if_tun.h>
-  #define USE_LINUX_TUN 1
- #else
-  #error ### linux/if_tun.h missing ###
- #endif
-#else
- #ifdef HAVE_NET_IF_H
-  #include <net/if.h>
-  #define USE_BSD_TUN 1
- #endif
-#endif
+static void isis_bf_hmac_md5_pre_hash_func(void *proto_data, const char *pre_hash_data, unsigned pre_hash_data_len) {
+    isis_hmac_md5_data_t *data = (isis_hmac_md5_data_t *) proto_data;
+    data->pdu = pre_hash_data;
+    data->pdu_len = pre_hash_data_len;
+}
 
+static int isis_bf_hmac_md5_hash_func(void *proto_data, const char *secret, const char *hash_data, unsigned hash_data_len) {
+    isis_hmac_md5_data_t *data = (isis_hmac_md5_data_t *) proto_data;
+    md5_byte_t digest[16];
+    
+    hmac_md5((const unsigned char *) data->pdu, data->pdu_len, (const unsigned char *) secret, strlen(secret), digest);
+            
+    if(!memcmp(hash_data, digest, 16))
+        return 1;
+    return 0;
+}
 
-#include <dnet.h>
-#include <pcap.h>
-
-#define READ_BUFFER_SIZE 1600
-#define WRITE_BUFFER_SIZE 1600
-#define PCAP_FILTER_LENGTH 1024
-#define TUN_DEV_NAME_LENGTH 32
-#define MAX_TUN_NR 100
-
-#define CHECK_FOR_LOCKFILE 1000
-#define TIMEOUT_SEC 1
-#define TIMEOUT_USEC 0
-
-#define max(a,b) ((a)>(b) ? (a):(b))
-#define min(a,b) ((a)>(b) ? (b):(a))
-#define abs(a) ((a)<0 ? ((a)*-1):(a))
-
-typedef enum e_tun_mode { NONE_TUN, L2_TUN, L3_TUN } tun_mode;
-
-extern int mplstun(tun_mode, char*, char*, uint16_t, uint16_t, char*, char*, uint16_t, uint16_t, char*);
-extern int mplstun_v(tun_mode, char*, char*, uint16_t, uint16_t, char*, char*, uint16_t, uint16_t, char*, int);
-
-#endif
+bf_error isis_bf_hmac_md5_state_new(bf_state_t **state) {
+    bf_error error;
+    isis_hmac_md5_data_t *proto_data;
+    
+    if((error = bf_state_new(state)) > 0)
+        return error;
+    
+    proto_data = malloc(sizeof(isis_hmac_md5_data_t));
+    if(proto_data == NULL)
+        return BF_ERR_NO_MEM;
+    proto_data->pdu = NULL;
+    proto_data->pdu_len = 0;
+    if((error = bf_set_proto_data(*state, (void *) proto_data, NULL)) > 0) {
+        free(proto_data);
+        return error;
+    }
+    if((error = bf_set_pre_hash_func(*state, isis_bf_hmac_md5_pre_hash_func)) > 0)
+        return error;
+    if((error = bf_set_hash_func(*state, isis_bf_hmac_md5_hash_func)) > 0)
+        return error;
+    return BF_SUCCESS;
+}

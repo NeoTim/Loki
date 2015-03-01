@@ -276,6 +276,10 @@ class codename_loki(object):
         self.data_dir = DATA_DIR
         self.devices = {}
         self.ui = None
+        self.wordlist = None
+        self.bruteforce = True
+        self.bruteforce_full = False
+        self.bruteforce_threads = 4
 
         self.eth_checks = []
         self.ip_checks = []

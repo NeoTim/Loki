@@ -32,7 +32,7 @@
  *      OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "lib/mplsred.h"
+#include <mplsred.h>
 
 int mplsred(char *in_device, char *out_device, int num_label, uint16_t in_label, uint16_t out_label, char *filter, char *lock_file, int verbose)
 {

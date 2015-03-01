@@ -1,7 +1,7 @@
 /*
- *      mplsred.c
- *
- *      Copyright 2010 Daniel Mende <dmende@ernw.de>
+ *      bfd.c
+ * 
+ *      Copyright 2015 Daniel Mende <dmende@ernw.de>
  */
 
 /*
@@ -31,45 +31,51 @@
  *      (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *      OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
-#include <Python.h>
-
+ 
+#include <stdlib.h>
 #include <string.h>
 
-#include "lib/mplsred.h"
+#include <bf.h>
+#include <bf/bfd.h>
 
-static PyObject *
-mpls_red(PyObject *self, PyObject *args)
-{
-    char *in_device, *out_device;
-    int num_label;
-    int in_label, out_label;
-    char *filter;
-    char *lock_file;
-    int verbose;
-    
-    if(!PyArg_ParseTuple(args, "ssiiissi", &in_device, &out_device, &num_label, &in_label, &out_label, &filter, &lock_file, &verbose))
-        return NULL;
-
-    Py_BEGIN_ALLOW_THREADS
-    mplsred(in_device, out_device, num_label, in_label, out_label, filter, lock_file, verbose);
-    Py_END_ALLOW_THREADS
-
-    Py_INCREF(Py_None);
-    return Py_None;
+static void bfd_bf_md5_pre_hash_func(void *proto_data, const char *pre_hash_data, unsigned pre_hash_data_len) {
+    bfd_md5_data_t *data = (bfd_md5_data_t *) proto_data;
+    md5_init(&data->base);
+    md5_append(&data->base, (const md5_byte_t *) pre_hash_data, pre_hash_data_len);
 }
 
-static PyMethodDef MplsredMethods[] = {
-    {"mplsred", mpls_red, METH_VARARGS, "Redirects MPLS data flows"},
-    {NULL, NULL, 0, NULL}        /* Sentinel */
-};
+static int bfd_bf_md5_hash_func(void *proto_data, const char *secret, const char *hash_data, unsigned hash_data_len) {
+    bfd_md5_data_t *data = (bfd_md5_data_t *) proto_data;
+    md5_state_t cur;
+    md5_byte_t digest[16];
+    
+    memset(digest, 0, 16);
+    memcpy(digest, secret, strlen(secret));
+    memcpy((void *) &cur, &data->base, sizeof(md5_state_t));
+    md5_append(&cur, digest, 16);
+    md5_finish(&cur, digest);
+    if(!memcmp(hash_data, digest, 16))
+        return 1;
+    return 0;
+}
 
-PyMODINIT_FUNC
-initmplsred(void)
-{
-    PyObject *m;
-
-    m = Py_InitModule("mplsred", MplsredMethods);
-    if (m == NULL)
-        return;
+bf_error bfd_bf_md5_state_new(bf_state_t **state) {
+    bf_error error;
+    bfd_md5_data_t *proto_data;
+    
+    if((error = bf_state_new(state)) > 0)
+        return error;
+    
+    proto_data = malloc(sizeof(bfd_md5_data_t));
+    if(proto_data == NULL)
+        return BF_ERR_NO_MEM;
+    if((error = bf_set_proto_data(*state, (void *) proto_data, NULL)) > 0) {
+        free(proto_data);
+        return error;
+    }
+    if((error = bf_set_pre_hash_func(*state, bfd_bf_md5_pre_hash_func)) > 0)
+        return error;
+    if((error = bf_set_hash_func(*state, bfd_bf_md5_hash_func)) > 0)
+        return error;
+    return BF_SUCCESS;
 }

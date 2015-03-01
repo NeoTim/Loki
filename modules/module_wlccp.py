@@ -652,7 +652,7 @@ class mod_class(object):
                 wl = self.wordlist_filechooserbutton.get_filename()
                 if not wl:
                     return
-                pw = loki_bindings.asleap.asleap.attack_leap(wl, chall, leap_auth_resp, id, user)
+                pw = loki_bindings.asleap.attack_leap(wl, chall, leap_auth_resp, id, user)
                 if pw != "":
                     self.log("WLCCP: Found LEAP-Password %s for connection %s" % (pw, connection.replace('\n       <=>\n', ' <=> ')))
                     for j in xrange(self.comms_treestore.iter_n_children(iter)):

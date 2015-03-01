@@ -32,8 +32,9 @@
  *      (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *      OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
-#include "lib/mplstun.h"
+ 
+#include <libgen.h>
+#include <mplstun.h>
 
 #define LOCKFILE_LENGTH 256
 char lockfile[LOCKFILE_LENGTH];
@@ -162,7 +163,7 @@ int main(int argc, char *argv[])
 
     pid = getpid();
     name = strdup(argv[0]);
-    snprintf(lockfile, LOCKFILE_LENGTH, "/tmp/%s-%i-lock", basename(name), pid);
+    snprintf(lockfile, LOCKFILE_LENGTH, "/tmp/%s-%d-lock", basename(name), pid);
     lfile = fopen(lockfile, "w+");
     if(lfile == NULL) {
         fprintf(stderr, "Couldn't open lockfile '%s': %s\n", lockfile, strerror(errno));

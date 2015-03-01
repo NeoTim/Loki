@@ -388,7 +388,7 @@ class bgp_session(threading.Thread):
             import loki_bindings
             for (i, j) in self.md5:
                 if i == self.dest:
-                    loki_bindings.tcpmd5.tcpmd5.set(self.sock.fileno(), self.parent.ip, i, BGP_PORT, j)
+                    loki_bindings.tcpmd5.set(self.sock.fileno(), self.parent.ip, i, BGP_PORT, j)
             
         self.sock.connect((self.dest, BGP_PORT))
         if not bf:
@@ -433,7 +433,7 @@ class bgp_session(threading.Thread):
             import loki_bindings
             for (i, j) in self.md5:
                 if i == self.dest:
-                    loki_bindings.tcpmd5.tcpmd5.clear(self.sock.fileno(), self.parent.ip, i, BGP_PORT)
+                    loki_bindings.tcpmd5.clear(self.sock.fileno(), self.parent.ip, i, BGP_PORT)
         self.sock.close()
 
 ### MODULE_CLASS ###

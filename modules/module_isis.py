@@ -322,43 +322,53 @@ class isis_tlv_area_address(isis_tlv):
         return data
         
 class isis_md5bf(threading.Thread):
-    def __init__(self, parent, iter, bf, full, wl, digest, data, identifier):
+    def __init__(self, parent, iter, digest, data, identifier):
         self.parent = parent
         self.iter = iter
-        self.bf = bf
-        self.full = full
-        self.wl = wl
         self.digest = digest
         self.data = data
         self.identifier = identifier
+        self.obj = None
         threading.Thread.__init__(self)
 
     def run(self):
-        if self.bf and not self.wl:
-            self.wl = ""
-        #print "bf:%i full:%i, wl:%s digest:%s data:%s datalen:%i" % (self.bf, self.full, self.wl, self.digest.encode('hex'), self.data.encode('hex'), len(self.data))
-        (handle, self.tmpfile) = tempfile.mkstemp(prefix="isis-md5-", suffix="-lock")
-        print self.tmpfile
-        os.close(handle)
         if self.parent.platform == "Windows":
-            import isismd5bf
-            pw = isismd5bf.bf(self.bf, self.full, self.wl, self.digest, self.data, self.tmpfile)
+            import bf
         else:
-            import loki_bindings
-            pw = loki_bindings.isismd5.isismd5bf.bf(self.bf, self.full, self.wl, self.digest, self.data, self.tmpfile)
-        if os.path.exists(self.tmpfile):
+            from loki_bindings import bf
+        l = self.parent.parent
+        self.obj = bf.isis_hmac_md5_bf()
+        self.obj.num_threads = l.bruteforce_threads
+        if not l.bruteforce:
+            self.obj.mode = bf.MODE_WORDLIST
+            self.obj.wordlist = l.wordlist
+        else:
+            if not l.bruteforce_full:
+                self.obj.mode = bf.MODE_ALPHANUM
+            else:
+                self.obj.mode = bf.MODE_FULL
+        self.obj.pre_data = self.data
+        self.obj.hash_data = self.digest
+        
+        self.obj.start()
+        while self.obj.running:
+            time.sleep(0.01)
+        
+        #if self.parent.ui == 'gtk':
+        with gtk.gdk.lock:        
             if self.parent.neighbor_treestore.iter_is_valid(self.iter):
-                if pw != None:
-                    self.parent.neighbor_treestore.set_value(self.iter, self.parent.NEIGH_CRACK_ROW, pw)
-                    self.parent.log("ISIS: Found password '%s' for %s" % (pw, self.identifier))
+                if not self.obj.pw is None:
+                    self.parent.neighbor_treestore.set_value(self.iter, self.parent.NEIGH_CRACK_ROW, self.obj.pw)
+                    self.parent.log("ISIS: Found password '%s' for %s" % (self.obj.pw, self.identifier))
                 else:
                     self.parent.neighbor_treestore.set_value(self.iter, self.parent.NEIGH_CRACK_ROW, "NOT FOUND")
                     self.parent.log("ISIS: No password found for %s" % (self.identifier))
-                os.remove(self.tmpfile)
+        self.obj = None
 
     def quit(self):
-        if os.path.exists(self.tmpfile):
-            os.remove(self.tmpfile)
+        if not self.obj is None:
+            self.obj.stop()
+            self.obj = None
         
 class isis_thread(threading.Thread):
     def __init__(self, parent):
@@ -985,7 +995,7 @@ class mod_class(object):
                 digest = get_tlv(local, isis_tlv.TYPE_AUTHENTICATION).digest
                 get_tlv(local, isis_tlv.TYPE_AUTHENTICATION).digest = None
                 data = local.render()
-            thread = isis_md5bf(self, iter, self.parent.bruteforce, self.parent.bruteforce_full, self.parent.wordlist, digest, data, ident)
+            thread = isis_md5bf(self, iter, digest, data, ident)
             model.set_value(iter, self.NEIGH_CRACK_ROW, "RUNNING")
             thread.start()
             self.bf[ident] = thread

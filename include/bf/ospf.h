@@ -1,5 +1,5 @@
 /*
- *      ospf_bf.h
+ *      ospf.h
  * 
  *      Copyright 2015 Daniel Mende <dmende@ernw.de>
  */
@@ -33,14 +33,17 @@
  */
 
 #include <bf.h>
-
-#ifndef ARCH_IS_BIG_ENDIAN
-#define ARCH_IS_BIG_ENDIAN 0
-#endif
-#include <md5.h>
+#include <algos/md5.h>
+#include <algos/sha1.h>
 
 typedef struct {
     md5_state_t base;
 } ospf_md5_data_t;
 
-extern bf_error ospf_bf_md5_state_new(bf_state_t **);
+typedef struct {
+    const char *data;
+    unsigned data_len;
+} ospf_hmac_sha1_data_t;
+
+bf_error ospf_bf_md5_state_new(bf_state_t **);
+bf_error ospf_bf_hmac_sha1_state_new(bf_state_t **);

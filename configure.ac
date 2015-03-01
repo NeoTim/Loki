@@ -5,20 +5,24 @@ AC_PREREQ([2.69])
 AC_INIT([loki], [0.3.0], [bugs@c0decafe.de])
 AM_INIT_AUTOMAKE
 AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_HEADERS([include/config.h:include/config.in])
 
 # Initialize prefix.
 if test "$prefix" = "NONE"; then
    prefix="/usr/local"
 fi
 
+AC_C_BIGENDIAN
 # Checks for programs.
 AC_PROG_CC
+AM_PROG_CC_C_O
 AC_PROG_SED
 AC_PROG_MAKE_SET
 #AM_PATH_PYTHON([2.6])
 PC_INIT([2.6], [2.9])
 
 # Checks for libraries.
+ACX_PTHREAD
 AC_CHECK_LIB(crypt, encrypt)
 AC_CHECK_LIB(crypto, MD4)
 AC_CHECK_LIB(ssl, [SHA1_Init, DES_ecb_encrypt])
@@ -116,6 +120,24 @@ AC_ARG_WITH(libdnet,
   fi]
 )
 
+#~ AC_ARG_WITH([cryptlib],
+#~ [AS_HELP_STRING([--with-cryptlib],
+   #~ [ --with-cryptlib=DIR    use cryptlib in DIR (default is no)])],
+#~ [ case "$withval" in
+  #~ yes)
+    #~ AC_CHECK_HEADERS([crypto/cryptodev.h])
+    #~ ;;
+  #~ *)
+    #~ AC_MSG_CHECKING(for cryptodev)
+    #~ AC_MSG_RESULT($withval)
+    #~ if test -f $withval/crypto/cryptodev.h; then
+      #~ CRYPTLIB_INC="-I$withval"
+    #~ fi
+    #~ ;;
+  #~ esac
+  #~ USE_CRYPTLIB=yes ],
+#~ [USE_CRYPTLIB=no])
+
 AC_ARG_WITH([gtk],
 [AS_HELP_STRING([--with-gtk],
    [use gtk UI (default is no)])],
@@ -132,6 +154,8 @@ LOKI_URWID=loki_urw.py],
 
 AC_SUBST(DNETINC)
 AC_SUBST(DNETLIB)
+#~ AC_SUBST(USE_CRYPTLIB)
+#~ AC_SUBST(CRYPTLIB_INC)
 AC_SUBST(USE_GTK)
 AC_SUBST(LOKI_GTK)
 AC_SUBST(USE_URWID)

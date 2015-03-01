@@ -36,8 +36,8 @@
 #define _BF_H_
 
 #include <stdio.h>
-
 #include <pthread.h>
+#include <config.h>
 
 #define BF_MAX_BRUTE_PW_LEN 16
 #define BF_DFLT_NO_THREADS 4
@@ -50,14 +50,18 @@ typedef enum {
     BF_SUCCESS = 0,
     BF_ERR_NO_MEM,
     BF_ERR_PTHREAD,
-    BF_ERR_INVALID_STATE,
     BF_ERR_RUNNING,
-    BF_ERR_INVALID_ARGUMENT
+    BF_ERR_INVALID_ARGUMENT,
+    BF_ERR_NOT_FOUND,
 } bf_error;
 
-typedef enum { BF_WORDLIST, BF_ALPHANUM, BF_FULL } bf_mode;
+typedef enum {
+    BF_WORDLIST = 0,
+    BF_ALPHANUM,
+    BF_FULL
+} bf_mode;
 
-#define BF_CHECK_NULL(x)    { if(x == NULL)  { return BF_ERR_INVALID_STATE; } }
+#define BF_CHECK_NULL(x)    { if(x == NULL)  { return BF_ERR_INVALID_ARGUMENT; } }
 #define BF_CHECK_RUNNING(x) { if(x->running) { return BF_ERR_RUNNING; } }
 
 typedef void (pre_hash_func_t)(void *, const char *, unsigned);
@@ -80,30 +84,57 @@ typedef struct {
     hash_func_t *hash_func;
     pthread_mutex_t mutex;
     pthread_t *threads;
-    char brute_pw[BF_MAX_BRUTE_PW_LEN+1];
+    char *brute_pw;
     char *pw;
     short running;
     void *proto_data;
     delete_proto_data_t *delete_proto_data_func;
 } bf_state_t;
 
-extern bf_error bf_state_new(bf_state_t **);
-extern bf_error bf_state_delete(bf_state_t *);
+typedef struct {
+    bf_state_t *state;
+    unsigned thread_no;
+} bf_thread_t;
 
-extern bf_error bf_set_wordlist(bf_state_t *, const char *);
-extern bf_error bf_set_mode(bf_state_t *, bf_mode);
-extern bf_error bf_set_num_threads(bf_state_t *, unsigned);
-#ifdef BF_USE_LOCKFILE
-extern bf_error bf_set_lockfile(bf_state_t *, const char *);
+#ifdef __cplusplus
+extern "C" 
+{
 #endif
-extern bf_error bf_set_pre_data(bf_state_t *, const char *, unsigned);
-extern bf_error bf_set_pre_hash_func(bf_state_t *, pre_hash_func_t *);
-extern bf_error bf_set_hash_data(bf_state_t *, const char *, unsigned);
-extern bf_error bf_set_hash_func(bf_state_t *, hash_func_t *);
-extern bf_error bf_set_proto_data(bf_state_t *, void *, delete_proto_data_t *);
 
-extern bf_error bf_start(bf_state_t *);
-extern bf_error bf_check_finished(bf_state_t *);
-extern bf_error bf_stop(bf_state_t *);
+bf_error bf_state_new(bf_state_t **);
+bf_error bf_state_delete(bf_state_t *);
+
+bf_error bf_set_wordlist(bf_state_t *, const char *);
+bf_error bf_set_mode(bf_state_t *, bf_mode);
+bf_error bf_set_num_threads(bf_state_t *, unsigned);
+#ifdef BF_USE_LOCKFILE
+bf_error bf_set_lockfile(bf_state_t *, const char *);
+#endif
+bf_error bf_set_pre_data(bf_state_t *, const char *, unsigned);
+bf_error bf_set_pre_hash_func(bf_state_t *, pre_hash_func_t *);
+bf_error bf_set_hash_data(bf_state_t *, const char *, unsigned);
+bf_error bf_set_hash_func(bf_state_t *, hash_func_t *);
+bf_error bf_set_proto_data(bf_state_t *, void *, delete_proto_data_t *);
+
+bf_error bf_get_wordlist(bf_state_t *, const char **);
+bf_error bf_get_mode(bf_state_t *, bf_mode *);
+bf_error bf_get_num_threads(bf_state_t *, unsigned *);
+#ifdef BF_USE_LOCKFILE
+bf_error bf_get_lockfile(bf_state_t *, const char **);
+#endif
+bf_error bf_get_pre_data(bf_state_t *, const char **, unsigned *);
+bf_error bf_get_pre_hash_func(bf_state_t *, pre_hash_func_t **);
+bf_error bf_get_hash_data(bf_state_t *, const char **, unsigned *);
+bf_error bf_get_hash_func(bf_state_t *, hash_func_t **);
+bf_error bf_get_proto_data(bf_state_t *, void **, delete_proto_data_t **);
+
+bf_error bf_start(bf_state_t *);
+bf_error bf_check_finished(bf_state_t *);
+bf_error bf_get_secret(bf_state_t *, char **);
+bf_error bf_stop(bf_state_t *);
+
+#ifdef __cplusplus
+}  /* end extern "C" */
+#endif
 
 #endif

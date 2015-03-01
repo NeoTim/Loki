@@ -4,15 +4,15 @@
 */
 
 #include <strings.h>
-#include "hmac_md5.h"
+#include <algos/hmac_md5.h>
 
 // HMAC := H(K XOR opad, H(K XOR ipad, text))
 
 void
 hmac_md5(text, text_len, key, key_len, digest)
-unsigned char*  text;                /* pointer to data stream */
+const unsigned char*  text;          /* pointer to data stream */
 int             text_len;            /* length of data stream */
-unsigned char*  key;                 /* pointer to authentication key */
+const unsigned char*  key;           /* pointer to authentication key */
 int             key_len;             /* length of authentication key */
 md5_byte_t*     digest;              /* caller digest to be filled in */
 
@@ -32,7 +32,7 @@ md5_byte_t*     digest;              /* caller digest to be filled in */
                 md5_state_t      tctx;
 
                 md5_init(&tctx);
-                md5_append(&tctx, key, key_len);
+                md5_append(&tctx, (const md5_byte_t *) key, key_len);
                 md5_finish(&tctx, tk);
 
                 key = tk;
