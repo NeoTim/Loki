@@ -47,5 +47,5 @@ setup(name='loki_bindings',
       author_email='dmende@ernw.de',
       url='https://c0decafe.de',
       packages=['loki_bindings'],
-      ext_modules=[bf]
+      ext_modules=cythonize(bf)
      )
