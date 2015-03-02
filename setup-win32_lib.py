@@ -1,6 +1,7 @@
 # setup.py.in
 # Copyright 2010 Daniel Mende <dmende@ernw.de> 
 
+import os
 from distutils.core import setup, Extension
 from Cython.Build import cythonize
 
@@ -22,9 +23,9 @@ bf_srcs = [ './loki_bindings/bf.pyx',
             './lib/algos/md5.c',
             './lib/algos/hmac_md5.c',
             './lib/algos/sha1.c' ]
-bf_incdirs = [ './include' ]
-bf_libdirs = [  ]
-bf_libs = [ 'ws2_32' ]
+bf_incdirs = [ './include', os.environ['win32-pthread_inc'] ]
+bf_libdirs = [ os.environ['win32-pthread_lib'] ]
+bf_libs = [ 'ws2_32', 'pthreadVC2' ]
 
 #~ mplsred = Extension(    'loki_bindings.mpls.mplsred',
                         #~ mplsred_srcs,

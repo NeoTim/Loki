@@ -110,14 +110,16 @@ uint8_t* sha1_result(sha1nfo *s) {
 
 #ifndef SHA_BIG_ENDIAN
 	// Swap byte order back
-	int i;
-	for (i=0; i<5; i++) {
-		s->state[i]=
-			  (((s->state[i])<<24)& 0xff000000)
-			| (((s->state[i])<<8) & 0x00ff0000)
-			| (((s->state[i])>>8) & 0x0000ff00)
-			| (((s->state[i])>>24)& 0x000000ff);
-	}
+	{
+        int i;
+        for (i=0; i<5; i++) {
+            s->state[i]=
+                  (((s->state[i])<<24)& 0xff000000)
+                | (((s->state[i])<<8) & 0x00ff0000)
+                | (((s->state[i])>>8) & 0x0000ff00)
+                | (((s->state[i])>>24)& 0x000000ff);
+        }
+    }
 #endif
 
 	// Return pointer to hash (20 characters)

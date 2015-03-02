@@ -51,6 +51,7 @@ typedef enum {
     BF_ERR_NO_MEM,
     BF_ERR_PTHREAD,
     BF_ERR_RUNNING,
+    BF_ERR_NOT_RUNNING,
     BF_ERR_INVALID_ARGUMENT,
     BF_ERR_NOT_FOUND,
 } bf_error;
@@ -63,6 +64,7 @@ typedef enum {
 
 #define BF_CHECK_NULL(x)    { if(x == NULL)  { return BF_ERR_INVALID_ARGUMENT; } }
 #define BF_CHECK_RUNNING(x) { if(x->running) { return BF_ERR_RUNNING; } }
+#define BF_CHECK_NOT_RUNNING(x) { if(!x->running) { return BF_ERR_NOT_RUNNING; } }
 
 typedef void (pre_hash_func_t)(void *, const char *, unsigned);
 typedef int (hash_func_t)(void *, const char *, const char *, unsigned);
@@ -72,7 +74,7 @@ typedef struct {
     const char *wordlist;
     FILE *f_wordlist;
     bf_mode mode;
-    unsigned num_threads;
+    unsigned short num_threads;
 #ifdef BF_USE_LOCKFILE
     const char *lockfile;
 #endif
@@ -129,9 +131,10 @@ bf_error bf_get_hash_func(bf_state_t *, hash_func_t **);
 bf_error bf_get_proto_data(bf_state_t *, void **, delete_proto_data_t **);
 
 bf_error bf_start(bf_state_t *);
+bf_error bf_stop(bf_state_t *);
 bf_error bf_check_finished(bf_state_t *);
 bf_error bf_get_secret(bf_state_t *, char **);
-bf_error bf_stop(bf_state_t *);
+bf_error bf_get_current_secret(bf_state_t *, char **);
 
 #ifdef __cplusplus
 }  /* end extern "C" */

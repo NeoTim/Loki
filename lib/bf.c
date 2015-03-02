@@ -45,6 +45,23 @@
 
 #include <bf.h>
 
+#ifdef _WIN32
+#include <windows.h>
+
+void usleep(__int64 usec) 
+{ 
+    HANDLE timer; 
+    LARGE_INTEGER ft; 
+
+    ft.QuadPart = -(10*usec); // Convert to 100 nanosecond interval, negative value indicates relative time
+
+    timer = CreateWaitableTimer(NULL, TRUE, NULL); 
+    SetWaitableTimer(timer, &ft, 0, NULL, NULL, 0); 
+    WaitForSingleObject(timer, INFINITE); 
+    CloseHandle(timer); 
+}
+#endif
+
 static short int inc_brute_pw_r(char *cur, int pos) {
     if(cur[pos] == 0) {
         cur[pos] = 33;
@@ -320,6 +337,7 @@ static void *thread_wordlist(void *arg) {
         pthread_exit(NULL);
     }
     pthread_mutex_lock(&state->mutex);
+    memset(line, 0, 512);
     ret = fgets(line, 512, state->f_wordlist);
     pthread_mutex_unlock(&state->mutex);
     
@@ -378,6 +396,7 @@ static void *thread_wordlist(void *arg) {
             pthread_exit(NULL);
         }
         pthread_mutex_lock(&state->mutex);
+        memset(line, 0, 512);
         ret = fgets(line, 512, state->f_wordlist);
         pthread_mutex_unlock(&state->mutex);
     }
@@ -458,7 +477,7 @@ static void *thread_bruteforce(void *arg) {
 bf_error bf_start(bf_state_t *state) {
     void *(*thread_func)(void *);
     bf_thread_t *thread;
-    int i;
+    unsigned short i;
 
     BF_CHECK_NULL(state);
     BF_CHECK_RUNNING(state);
@@ -491,14 +510,8 @@ bf_error bf_start(bf_state_t *state) {
     return BF_SUCCESS;
 }
 
-bf_error bf_check_finished(bf_state_t *state) {
-    BF_CHECK_NULL(state);
-    BF_CHECK_RUNNING(state);
-    return BF_SUCCESS;
-}
-
 bf_error bf_stop(bf_state_t *state) {
-    int i;
+    unsigned short i;
     
     BF_CHECK_NULL(state);
     
@@ -520,15 +533,46 @@ bf_error bf_stop(bf_state_t *state) {
     return BF_SUCCESS;
 }
 
+bf_error bf_check_finished(bf_state_t *state) {
+    BF_CHECK_NULL(state);
+    BF_CHECK_RUNNING(state);
+    return BF_SUCCESS;
+}
+
 bf_error bf_get_secret(bf_state_t *state, char **out) {
     BF_CHECK_NULL(state);
     BF_CHECK_RUNNING(state);
+    BF_CHECK_NULL(out);
     
-    if(out == NULL)
-        return BF_ERR_INVALID_ARGUMENT;
     if(state->pw == NULL)
         return BF_ERR_NOT_FOUND;
     
     *out = state->pw;
     return BF_SUCCESS;
 }
+
+bf_error bf_get_current_secret(bf_state_t *state, char **out) {
+    BF_CHECK_NULL(state);
+    BF_CHECK_NOT_RUNNING(state);
+    BF_CHECK_NULL(out);
+    
+    pthread_mutex_lock(&state->mutex);
+    if(state->mode == BF_WORDLIST) {
+        long fp = ftell(state->f_wordlist);
+        char line[512], *ret;
+        size_t len;
+        ret = fgets(line, 512, state->f_wordlist);
+        len = strlen(line);
+        fseek(state->f_wordlist, fp, SEEK_SET);
+        *out = malloc(sizeof(char) * len);
+        memcpy(*out, line, len);
+    } else {
+        *out = malloc(sizeof(char) * BF_MAX_BRUTE_PW_LEN+1);
+        memcpy(*out, state->brute_pw, BF_MAX_BRUTE_PW_LEN);
+        *out[BF_MAX_BRUTE_PW_LEN] = '\0';
+    }
+    pthread_mutex_unlock(&state->mutex);
+    
+    return BF_SUCCESS;
+}
+

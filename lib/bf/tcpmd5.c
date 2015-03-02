@@ -39,16 +39,17 @@
 
 static void tcpmd5_bf_pre_hash_func(void *proto_data, const char *pre_hash_data, unsigned pre_hash_data_len) {
     tcpmd5_data_t *data = (tcpmd5_data_t *) proto_data;
-    struct ip ip;
+    struct ip *ip;
     struct tcphdr tcp;
     struct tcp4_pseudohdr phdr;
     unsigned int head_len, data_len;
 
-    memcpy(&ip, pre_hash_data, sizeof(struct ip));
+    ip = (struct ip *) pre_hash_data;
     memcpy(&tcp, pre_hash_data + sizeof(struct ip), sizeof(struct tcphdr));
 
-    phdr.saddr = ip.ip_src.s_addr;
-    phdr.daddr = ip.ip_dst.s_addr;
+
+    phdr.saddr = ip->ip_src.s_addr;
+    phdr.daddr = ip->ip_dst.s_addr;
     phdr.pad = 0;
     phdr.protocol = IPPROTO_TCP;
     phdr.len = htons(pre_hash_data_len - sizeof(struct ip));

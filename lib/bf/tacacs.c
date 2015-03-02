@@ -34,7 +34,10 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <arpa/inet.h>
+
+#ifdef _WIN32
+#include <winsock2.h>
+#endif
 
 #include <bf/tacacs.h>
 

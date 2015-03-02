@@ -44,6 +44,7 @@ cdef extern from "bf.h":
         BF_ERR_NO_MEM
         BF_ERR_PTHREAD
         BF_ERR_RUNNING
+        BF_ERR_NOT_RUNNING
         BF_ERR_INVALID_ARGUMENT
         BF_ERR_NOT_FOUND
     ctypedef enum bf_mode:
@@ -66,8 +67,9 @@ cdef extern from "bf.h":
     bf_error bf_get_hash_data(bf_state_t *, char **, unsigned *)
     bf_error bf_start(bf_state_t *)
     bf_error bf_check_finished(bf_state_t *)
-    bf_error bf_get_secret(bf_state_t *, char **)
     bf_error bf_stop(bf_state_t *)
+    bf_error bf_get_secret(bf_state_t *, char **)
+    bf_error bf_get_current_secret(bf_state_t *, char **)
 
 MODE_WORDLIST = BF_WORDLIST
 MODE_ALPHANUM = BF_ALPHANUM
@@ -82,6 +84,7 @@ cdef class bf:
                         BF_ERR_NO_MEM   :           "OUT_OF_MEMORY_ERROR",
                         BF_ERR_PTHREAD  :           "PTHREAD_ERROR",
                         BF_ERR_RUNNING  :           "IS_RUNNING_ERROR",
+                        BF_ERR_RUNNING  :           "IS_NOT_RUNNING ERROR",
                         BF_ERR_INVALID_ARGUMENT :   "INVALID_ARGUMENT_ERROR",
                         BF_ERR_NOT_FOUND    :       "NOT_FOUND_ERROR",
                         }
@@ -232,6 +235,20 @@ cdef class bf:
                 return None
             else:
                 return PyString_FromString(data)
+
+    property cur_pw:
+        def __get__(self):
+            cdef bf_error err
+            cdef char *data
+            err = bf_get_current_secret(self.state, &data)
+            if err > 0:
+                raise RuntimeError(self.error_to_str[err])
+            if data is NULL:
+                return None
+            else:
+                ret = PyString_FromString(data)
+                free(data)
+                return ret
     
     def start(self):
         cdef bf_error err
