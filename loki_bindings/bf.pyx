@@ -265,6 +265,9 @@ cdef class bf:
 cdef extern from "bf/ospf.h":
     bf_error ospf_bf_md5_state_new(bf_state_t **)
     bf_error ospf_bf_hmac_sha1_state_new(bf_state_t **)
+    bf_error ospf_bf_hmac_sha256_state_new(bf_state_t **)
+    bf_error ospf_bf_hmac_sha384_state_new(bf_state_t **)
+    bf_error ospf_bf_hmac_sha512_state_new(bf_state_t **)
 
 cdef class ospf_md5_bf(bf):
     def __cinit__(self):
@@ -277,6 +280,27 @@ cdef class ospf_hmac_sha1_bf(bf):
     def __cinit__(self):
         cdef bf_error err
         err = ospf_bf_hmac_sha1_state_new(&self.state)
+        if err > 0:
+            raise RuntimeError(self.error_to_str[err])
+
+cdef class ospf_hmac_sha256_bf(bf):
+    def __cinit__(self):
+        cdef bf_error err
+        err = ospf_bf_hmac_sha256_state_new(&self.state)
+        if err > 0:
+            raise RuntimeError(self.error_to_str[err])
+
+cdef class ospf_hmac_sha384_bf(bf):
+    def __cinit__(self):
+        cdef bf_error err
+        err = ospf_bf_hmac_sha384_state_new(&self.state)
+        if err > 0:
+            raise RuntimeError(self.error_to_str[err])
+
+cdef class ospf_hmac_sha512_bf(bf):
+    def __cinit__(self):
+        cdef bf_error err
+        err = ospf_bf_hmac_sha512_state_new(&self.state)
         if err > 0:
             raise RuntimeError(self.error_to_str[err])
 

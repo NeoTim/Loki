@@ -401,6 +401,8 @@ static void *thread_wordlist(void *arg) {
         pthread_mutex_unlock(&state->mutex);
     }
     pthread_exit(NULL);
+    
+    return NULL;
 }
 
 static void *thread_bruteforce(void *arg) {
@@ -472,6 +474,8 @@ static void *thread_bruteforce(void *arg) {
         pthread_mutex_unlock(&state->mutex);
     }
     pthread_exit(NULL);
+    
+    return NULL;
 }
 
 bf_error bf_start(bf_state_t *state) {

@@ -25,7 +25,9 @@ bf_test_SOURCES = 	bf_test.c \
 					../lib/bf/bfd.c \
 					../lib/algos/md5.c \
 					../lib/algos/hmac_md5.c \
-					../lib/algos/sha1.c
+					../lib/algos/sha1.c \
+					../lib/algos/sha2.c \
+					../lib/algos/hmac_sha2.c
 bf_test_CFLAGS = @PTHREAD_CFLAGS@
 bf_test_LDADD = @PTHREAD_LIBS@
 

@@ -35,6 +35,8 @@
 #include <bf.h>
 #include <algos/md5.h>
 #include <algos/sha1.h>
+#include <algos/sha2.h>
+#include <algos/hmac_sha2.h>
 
 typedef struct {
     md5_state_t base;
@@ -43,7 +45,10 @@ typedef struct {
 typedef struct {
     const char *data;
     unsigned data_len;
-} ospf_hmac_sha1_data_t;
+} ospf_hmac_sha_data_t;
 
 bf_error ospf_bf_md5_state_new(bf_state_t **);
 bf_error ospf_bf_hmac_sha1_state_new(bf_state_t **);
+bf_error ospf_bf_hmac_sha256_state_new(bf_state_t **);
+bf_error ospf_bf_hmac_sha384_state_new(bf_state_t **);
+bf_error ospf_bf_hmac_sha512_state_new(bf_state_t **);
