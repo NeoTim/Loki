@@ -35,26 +35,23 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <bf.h>
 #include <bf/bfd.h>
 
 static void bfd_bf_md5_pre_hash_func(void *proto_data, const char *pre_hash_data, unsigned pre_hash_data_len) {
     bfd_md5_data_t *data = (bfd_md5_data_t *) proto_data;
-    md5_init(&data->base);
-    md5_append(&data->base, (const md5_byte_t *) pre_hash_data, pre_hash_data_len);
+    MD5_Init(&data->base);
+    MD5_Update(&data->base, pre_hash_data, pre_hash_data_len);
 }
 
 static int bfd_bf_md5_hash_func(void *proto_data, const char *secret, const char *hash_data, unsigned hash_data_len) {
     bfd_md5_data_t *data = (bfd_md5_data_t *) proto_data;
-    md5_state_t cur;
-    md5_byte_t digest[16];
+    MD5_CTX cur;
+    unsigned char digest[MD5_DIGEST_LENGTH];
     
-    memset(digest, 0, 16);
-    memcpy(digest, secret, strlen(secret));
-    memcpy((void *) &cur, &data->base, sizeof(md5_state_t));
-    md5_append(&cur, digest, 16);
-    md5_finish(&cur, digest);
-    if(!memcmp(hash_data, digest, 16))
+    memcpy((void *) &cur, &data->base, sizeof(MD5_CTX));
+    MD5_Update(&cur, secret, MD5_DIGEST_LENGTH);
+    MD5_Final(digest, &cur);
+    if(!memcmp(hash_data, digest, MD5_DIGEST_LENGTH))
         return 1;
     return 0;
 }

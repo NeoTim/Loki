@@ -18,20 +18,18 @@ AC_PROG_CC
 AM_PROG_CC_C_O
 AC_PROG_SED
 AC_PROG_MAKE_SET
-#AM_PATH_PYTHON([2.6])
+
+# Check python version
 PC_INIT([2.6], [2.9])
 
 # Checks for libraries.
 ACX_PTHREAD
 AC_CHECK_LIB(crypt, encrypt)
-AC_CHECK_LIB(crypto, MD4)
-AC_CHECK_LIB(ssl, [SHA1_Init, DES_ecb_encrypt])
 
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h netdb.h netinet/in.h stdint.h stdlib.h string.h sys/ioctl.h syslog.h unistd.h])
-AC_CHECK_HEADERS([netpacket/packet.h crypt.h openssl/des.h endian.h sys/endian.h])
+AC_CHECK_HEADERS([netpacket/packet.h crypt.h endian.h sys/endian.h])
 AC_CHECK_HEADERS([netinet/ether.h net/ethernet.h net/if.h])
-AC_CHECK_HEADERS([openssl/md4.h])
 AC_CHECK_HEADERS([sys/cdefs.h sys/time.h sys/socket.h linux/if.h linux/if_tun.h linux/wireless.h], [], [],
 [[  #ifdef HAVE_SYS_CDEFS_H
      #include <sys/cdefs.h>
@@ -49,6 +47,34 @@ AC_CHECK_HEADERS([sys/cdefs.h sys/time.h sys/socket.h linux/if.h linux/if_tun.h 
      #include <linux/wireless.h>
     #endif
 ]])
+
+AC_ARG_WITH([libssl],
+[AS_HELP_STRING([--with-libssl],
+   [ --with-libssl=DIR    use libssl in DIR (default is no)])],
+[ case "$withval" in
+  yes)
+    AC_CHECK_HEADERS([openssl/md5.h openssl/sha.h])
+    AC_CHECK_LIB(crypto, [MD5_Init])
+    AC_CHECK_LIB(crypto, [SHA1_Init])
+    AC_CHECK_LIB(crypto, [SHA256_Init])
+    AC_CHECK_LIB(crypto, [SHA384_Init])
+    AC_CHECK_LIB(crypto, [SHA512_Init])
+    CRYPTOLIB="-lcrypto"
+    ;;
+  *)
+    AC_MSG_CHECKING(for libssl)
+    AC_MSG_RESULT($withval)
+    #~ if test -f $withval/crypto/cryptodev.h; then
+      #~ CRYPTLIB_INC="-I$withval"
+    #~ fi
+    AC_ERROR([Not yet implemented.])
+    ;;
+  esac
+  USE_LIBSSL=yes ],
+[USE_LIBSSL=no])
+
+AC_SUBST(CRYPTOINC)
+AC_SUBST(CRYPTOLIB)
 
 dnl Checks for libpcap
 AC_MSG_CHECKING(for libpcap)
@@ -120,23 +146,8 @@ AC_ARG_WITH(libdnet,
   fi]
 )
 
-#~ AC_ARG_WITH([cryptlib],
-#~ [AS_HELP_STRING([--with-cryptlib],
-   #~ [ --with-cryptlib=DIR    use cryptlib in DIR (default is no)])],
-#~ [ case "$withval" in
-  #~ yes)
-    #~ AC_CHECK_HEADERS([crypto/cryptodev.h])
-    #~ ;;
-  #~ *)
-    #~ AC_MSG_CHECKING(for cryptodev)
-    #~ AC_MSG_RESULT($withval)
-    #~ if test -f $withval/crypto/cryptodev.h; then
-      #~ CRYPTLIB_INC="-I$withval"
-    #~ fi
-    #~ ;;
-  #~ esac
-  #~ USE_CRYPTLIB=yes ],
-#~ [USE_CRYPTLIB=no])
+AC_SUBST(DNETINC)
+AC_SUBST(DNETLIB)
 
 AC_ARG_WITH([gtk],
 [AS_HELP_STRING([--with-gtk],
@@ -145,6 +156,9 @@ AC_ARG_WITH([gtk],
 LOKI_GTK=loki_gtk.py],
 [USE_GTK=no])
 
+AC_SUBST(USE_GTK)
+AC_SUBST(LOKI_GTK)
+
 AC_ARG_WITH([urwid],
 [AS_HELP_STRING([--with-urwid],
    [use urwid UI (default is no)])],
@@ -152,12 +166,6 @@ AC_ARG_WITH([urwid],
 LOKI_URWID=loki_urw.py],
 [USE_URWID=no])
 
-AC_SUBST(DNETINC)
-AC_SUBST(DNETLIB)
-#~ AC_SUBST(USE_CRYPTLIB)
-#~ AC_SUBST(CRYPTLIB_INC)
-AC_SUBST(USE_GTK)
-AC_SUBST(LOKI_GTK)
 AC_SUBST(USE_URWID)
 AC_SUBST(LOKI_URWID)
 
@@ -170,23 +178,16 @@ AC_TYPE_UINT64_T
 AC_TYPE_UINT8_T
 
 # Checks for library functions.
-AC_FUNC_FORK
 AC_FUNC_FSEEKO
 AC_FUNC_MALLOC
-AC_CHECK_FUNCS([bzero getcwd gethostbyname gettimeofday inet_ntoa memset mkdir select socket strchr strerror strtoul])
+AC_CHECK_FUNCS([getcwd gethostbyname gettimeofday inet_ntoa memset mkdir select socket strchr strerror strtoul])
 
 # Error conditions
 if test "$ac_cv_lib_pcap_pcap_open_live" = no ; then
     AC_ERROR(libpcap not found!)
 fi
-if test "$ac_cv_lib_ssl_SHA1_Init" = no ; then
-    AC_ERROR(libssl not found!)
-else
-    if test "$ac_cv_lib_crypt_encrypt" = no ; then
-        if test "$ac_cv_lib_ssl_DES_ecb_encrypt" = no ; then
-            AC_ERROR(no usable DES implementation found!)
-        fi
-    fi
+if test "$ac_cv_lib_dnet_eth_open" = no ; then
+    AC_ERROR(libdnet not found!)
 fi
 
 

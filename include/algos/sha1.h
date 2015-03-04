@@ -12,6 +12,13 @@
 #define HASH_LENGTH 20
 #define BLOCK_LENGTH 64
 
+/*libcrypto compability */
+#define SHA_DIGEST_LENGTH 20
+#define SHA_CTX sha1nfo
+#define SHA1_Init(x) sha1_init((x))
+#define SHA1_Update(x, y, z) sha1_write((x), (y), (z))
+#define SHA1_Final(x, y) memcpy((x), sha1_result((y)), SHA_DIGEST_LENGTH)
+
 typedef struct sha1nfo {
 	uint32_t buffer[BLOCK_LENGTH/4];
 	uint32_t state[HASH_LENGTH/4];

@@ -33,13 +33,12 @@
  */
 
 #include <bf.h>
-#include <algos/md5.h>
-#include <algos/sha1.h>
-#include <algos/sha2.h>
-#include <algos/hmac_sha2.h>
+#include <config.h>
+
+#include <algos.h>
 
 typedef struct {
-    md5_state_t base;
+    MD5_CTX base;
 } ospf_md5_data_t;
 
 typedef struct {

@@ -33,7 +33,7 @@
  */
 
 #include <bf.h>
-#include <algos/md5.h>
+#include <algos.h>
 
 typedef struct {
     const char *pdu;

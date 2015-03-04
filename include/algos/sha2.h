@@ -44,6 +44,28 @@
 #define SHA384_BLOCK_SIZE  SHA512_BLOCK_SIZE
 #define SHA224_BLOCK_SIZE  SHA256_BLOCK_SIZE
 
+/*libcrypto compability */
+
+#define SHA224_DIGEST_LENGTH  SHA224_DIGEST_SIZE
+#define SHA256_DIGEST_LENGTH  SHA256_DIGEST_SIZE
+#define SHA384_DIGEST_LENGTH  SHA384_DIGEST_SIZE
+#define SHA512_DIGEST_LENGTH  SHA512_DIGEST_SIZE
+
+#define SHA256_CTX sha256_ctx
+#define SHA256_Init(x) sha256_init((x))
+#define SHA256_Update(x, y, z) sha256_update((x), (y), (z))
+#define SHA256_Final(x, y) sha256_final((y), (x))
+
+#define SHA384_CTX sha384_ctx
+#define SHA384_Init(x) sha384_init((x))
+#define SHA384_Update(x, y, z) sha384_update((x), (y), (z))
+#define SHA384_Final(x, y) sha384_final((y), (x))
+
+#define SHA512_CTX sha512_ctx
+#define SHA512_Init(x) sha512_init((x))
+#define SHA512_Update(x, y, z) sha512_update((x), (y), (z))
+#define SHA512_Final(x, y) sha512_final((y), (x))
+
 #ifndef SHA2_TYPES
 #define SHA2_TYPES
 typedef unsigned char uint8;

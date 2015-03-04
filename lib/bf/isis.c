@@ -36,7 +36,6 @@
 #include <string.h>
 
 #include <bf/isis.h>
-#include <algos/hmac_md5.h>
 
 static void isis_bf_hmac_md5_pre_hash_func(void *proto_data, const char *pre_hash_data, unsigned pre_hash_data_len) {
     isis_hmac_md5_data_t *data = (isis_hmac_md5_data_t *) proto_data;
@@ -46,11 +45,12 @@ static void isis_bf_hmac_md5_pre_hash_func(void *proto_data, const char *pre_has
 
 static int isis_bf_hmac_md5_hash_func(void *proto_data, const char *secret, const char *hash_data, unsigned hash_data_len) {
     isis_hmac_md5_data_t *data = (isis_hmac_md5_data_t *) proto_data;
-    md5_byte_t digest[16];
+    unsigned char digest[MD5_DIGEST_LENGTH];
     
-    hmac_md5((const unsigned char *) data->pdu, data->pdu_len, (const unsigned char *) secret, strlen(secret), digest);
-            
-    if(!memcmp(hash_data, digest, 16))
+    unsigned len;
+    HMAC_MD5(secret, strlen(secret), data->pdu, data->pdu_len, digest, &len);
+
+    if(!memcmp(hash_data, digest, MD5_DIGEST_LENGTH))
         return 1;
     return 0;
 }

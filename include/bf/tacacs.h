@@ -33,10 +33,10 @@
  */
 
 #include <bf.h>
-#include <algos/md5.h>
+#include <algos.h>
 
 typedef struct {
-    md5_state_t base;
+    MD5_CTX base;
     const char *ciphertext;
     unsigned ciphertext_len;
 } tacacs_data_t;

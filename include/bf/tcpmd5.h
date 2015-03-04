@@ -33,6 +33,7 @@
  */
 
 #include <bf.h>
+#include <algos.h>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -104,10 +105,8 @@ struct tcp4_pseudohdr {
 	__uint16_t 		len;
 };
 
-#include <algos/md5.h>
-
 typedef struct {
-    md5_state_t base;
+    MD5_CTX base;
 } tcpmd5_data_t;
 
 bf_error tcpmd5_bf_state_new(bf_state_t **);

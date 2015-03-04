@@ -1,5 +1,5 @@
 /*
- *      bfd.h
+ *      algos.h
  * 
  *      Copyright 2015 Daniel Mende <dmende@ernw.de>
  */
@@ -32,11 +32,30 @@
  *      OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <bf.h>
-#include <algos.h>
+#ifndef _ALGOS_H_
+#define _ALGOS_H_
 
-typedef struct {
-    MD5_CTX base;
-} bfd_md5_data_t;
+#include <config.h>
 
-bf_error bfd_bf_md5_state_new(bf_state_t **);
+#ifdef HAVE_LIBCRYPTO
+
+# include <openssl/md5.h>
+# include <openssl/sha.h>
+# include <openssl/hmac.h>
+# include <openssl/evp.h>
+
+# define HMAC_MD5(a, b, c, d, e, f) HMAC(EVP_md5(), (a), (b), (c), (d), (e), (f));
+
+#else
+
+# include <algos/hmac_md5.h>
+# include <algos/sha1.h>
+# include <algos/sha2.h>
+# include <algos/hmac_sha2.h>
+
+# define HMAC_MD5(a, b, c, d, e, f) hmac_md5((c), (d), (a), (b), (e))
+
+#endif
+
+
+#endif

@@ -154,7 +154,9 @@ bf_srcs = [ '@top_srcdir@/loki_bindings/bf.pyx',
             '@top_srcdir@/lib/algos/hmac_sha2.c' ]
 bf_incdirs = [ '@top_srcdir@/include' ]
 bf_libdirs = [v[2:] for v in '@PTHREAD_LIBS@'.split() if v.startswith('-L')]
+bf_libdirs += [v[2:] for v in '@CRYPTOLIB@'.split() if v.startswith('-L')]
 bf_libs = [v[2:] for v in '@PTHREAD_LIBS@'.split() if v.startswith('-l')]
+bf_libs += [v[2:] for v in '@CRYPTOLIB@'.split() if v.startswith('-l')]
 
 asleap = Extension( 'loki_bindings.asleap',
                     asleap_srcs,

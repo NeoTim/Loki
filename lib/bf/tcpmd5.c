@@ -54,33 +54,33 @@ static void tcpmd5_bf_pre_hash_func(void *proto_data, const char *pre_hash_data,
     phdr.protocol = IPPROTO_TCP;
     phdr.len = htons(pre_hash_data_len - sizeof(struct ip));
 
-    md5_init(&data->base);
+    MD5_Init(&data->base);
 
 //1. the TCP pseudo-header (in the order: source IP address,
 //   destination IP address, zero-padded protocol number, and
 //   segment length)
-    md5_append(&data->base, (const md5_byte_t *) &phdr, sizeof(struct tcp4_pseudohdr));
+    MD5_Update(&data->base, (const unsigned char *) &phdr, sizeof(struct tcp4_pseudohdr));
 
 //2. the TCP header, excluding options, and assuming a checksum of
 //   zero
     tcp.th_sum = 0;
-    md5_append(&data->base, (const md5_byte_t *) &tcp, sizeof(struct tcphdr));
+    MD5_Update(&data->base, (const unsigned char *) &tcp, sizeof(struct tcphdr));
     
 //3. the TCP segment data (if any)
     head_len = sizeof(struct ip) + (tcp.th_off << 2);
     data_len = pre_hash_data_len > head_len ? pre_hash_data_len - head_len : 0;
-    md5_append(&data->base, (const md5_byte_t *) pre_hash_data + head_len, data_len);
+    MD5_Update(&data->base, pre_hash_data + head_len, data_len);
 }
 
 static int tcpmd5_bf_hash_func(void *proto_data, const char *secret, const char *hash_data, unsigned hash_data_len) {
     tcpmd5_data_t *data = (tcpmd5_data_t *) proto_data;
-    md5_state_t cur;
-    md5_byte_t digest[16];
+    MD5_CTX cur;
+    unsigned char digest[MD5_DIGEST_LENGTH];
     
-    memcpy((void *) &cur, &data->base, sizeof(md5_state_t));
-    md5_append(&cur, (const md5_byte_t *) secret, 16);
-    md5_finish(&cur, digest);
-    if(!memcmp(hash_data, digest, 16))
+    memcpy((void *) &cur, &data->base, sizeof(MD5_CTX));
+    MD5_Update(&cur, secret, strlen(secret));
+    MD5_Final(digest, &cur);
+    if(!memcmp(hash_data, digest, MD5_DIGEST_LENGTH))
         return 1;
     return 0;
 }

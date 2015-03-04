@@ -43,27 +43,46 @@
 
 static void tacacs_bf_pre_hash_func(void *proto_data, const char *pre_hash_data, unsigned pre_hash_data_len) {
     tacacs_data_t *data = (tacacs_data_t *) proto_data;
-    md5_init(&data->base);
-    md5_append(&data->base, (const md5_byte_t *) pre_hash_data, pre_hash_data_len);
+    MD5_Init(&data->base);
+    MD5_Update(&data->base, pre_hash_data, pre_hash_data_len);
 }
 
 static int tacacs_bf_hash_func(void *proto_data, const char *secret, const char *hash_data, unsigned hash_data_len) {
     tacacs_data_t *data = (tacacs_data_t *) proto_data;
-    md5_state_t cur;
-    md5_byte_t digest[16];
+    MD5_CTX cur;
+    unsigned char digest[MD5_DIGEST_LENGTH];
     int i;
     unsigned char status, flags;
     unsigned short server_msg_len, data_len;
-    unsigned char cleartext[16];
+    unsigned char cleartext[MD5_DIGEST_LENGTH];
     
-    memcpy(&cur, &data->base, sizeof(md5_state_t));
-    md5_append(&cur, (const md5_byte_t *) secret, strlen(secret));
-    md5_append(&cur, (const md5_byte_t *) hash_data, hash_data_len);
-    md5_finish(&cur, digest);
-    
-    for (i = 0; i < 16; i++) {
+    memcpy((void *) &cur, &data->base, sizeof(MD5_CTX));
+    MD5_Update(&cur, secret, strlen(secret));
+    MD5_Update(&cur, hash_data, hash_data_len);
+    MD5_Final(digest, &cur);
+
+#if 0
+    for (i = 0; i < MD5_DIGEST_LENGTH; i++) {
         cleartext[i] = data->ciphertext[i] ^ digest[i];
     }
+#else
+    cleartext[0] = data->ciphertext[0] ^ digest[0];
+    cleartext[1] = data->ciphertext[1] ^ digest[1];
+    cleartext[2] = data->ciphertext[2] ^ digest[2];
+    cleartext[3] = data->ciphertext[3] ^ digest[3];
+    cleartext[4] = data->ciphertext[4] ^ digest[4];
+    cleartext[5] = data->ciphertext[5] ^ digest[5];
+    cleartext[6] = data->ciphertext[6] ^ digest[6];
+    cleartext[7] = data->ciphertext[7] ^ digest[7];
+    cleartext[8] = data->ciphertext[8] ^ digest[8];
+    cleartext[9] = data->ciphertext[9] ^ digest[9];
+    cleartext[10] = data->ciphertext[10] ^ digest[10];
+    cleartext[11] = data->ciphertext[11] ^ digest[11];
+    cleartext[12] = data->ciphertext[12] ^ digest[12];
+    cleartext[13] = data->ciphertext[13] ^ digest[13];
+    cleartext[14] = data->ciphertext[14] ^ digest[13];
+    cleartext[15] = data->ciphertext[15] ^ digest[15];
+#endif
     
     status = cleartext[0];
     flags = cleartext[1];

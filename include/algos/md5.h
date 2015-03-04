@@ -68,6 +68,13 @@
  * efficiently on either one than if ARCH_IS_BIG_ENDIAN is defined.
  */
 
+/* libcrypto compatibility */
+#define MD5_DIGEST_LENGTH 16
+#define MD5_CTX md5_state_t
+#define MD5_Init(x) md5_init((x))
+#define MD5_Update(x, y, z) md5_append((x), (y), (z))
+#define MD5_Final(x, y) md5_finish((y), (x))
+
 typedef unsigned char md5_byte_t; /* 8-bit byte */
 typedef unsigned int md5_word_t; /* 32-bit word */
 
