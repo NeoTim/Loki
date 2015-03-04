@@ -7,7 +7,7 @@ def run_test(obj):
     t0 = time.time()
     obj.start()
     while obj.running:
-        time.sleep(0.1)
+        time.sleep(0.01)
         #~ try: print obj.cur_pw 
         #~ except: pass
     t1 = time.time()
@@ -54,5 +54,14 @@ obj = bf.tcpmd5_bf()
 obj.pre_data = "45c000401c8340000106fd05c0a86f0ac0a86f14d05d00b32ff1bc6400000000b0024000c6360000020405b41312ed37a465e55a8155ac1c953ce087f7c30000".decode("hex")
 obj.hash_data = "ed37a465e55a8155ac1c953ce087f7c3".decode("hex")
 run_test(obj)
+
+print "*** TACACS+ ***"
+obj = bf.tacacs_bf()
+obj.pre_data = "6d0e1631".decode("hex")
+obj.hash_data = "c006".decode("hex")
+obj.ciphertext = "db7c01e77499".decode("hex")
+run_test(obj)
+
+
 
 

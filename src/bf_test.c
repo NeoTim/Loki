@@ -149,13 +149,13 @@ int test_ospf() {
     return 0;
 }
 
-const char tacacs_pre_data[] = {    0x81, 0xfb, 0x47, 0xf0 };
+const char tacacs_pre_data[] = {    0x6d, 0x0e, 0x16, 0x31 };
 const unsigned tacacs_pre_data_len = 4;
 
-const char tacacs_hash_data[] = {   0xc0, 0x04 };
+const char tacacs_hash_data[] = {   0xc0, 0x06 };
 const unsigned tacacs_hash_data_len = 2;
 
-const char tacacs_ciphertext[] = {  0x99, 0x3f, 0xe8, 0x30,  0xd6, 0x60 };
+const char tacacs_ciphertext[] = {  0xdb, 0x7c, 0x01, 0xe7,  0x74, 0x99 };
 const unsigned tacacs_ciphertext_len = 6;
 
 int test_tacacs() {
@@ -169,8 +169,6 @@ int test_tacacs() {
         printf("Can't init state: %d\n", error);
         return 1;
     }
-    bf_set_wordlist(state, "/tmp/wordlist");
-    bf_set_mode(state, BF_WORDLIST);
     if((error = bf_set_pre_data(state, tacacs_pre_data, tacacs_pre_data_len)) > 0) {
         printf("Can't set pre data: %d\n", error);
         bf_state_delete(state);
