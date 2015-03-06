@@ -39,4 +39,9 @@ typedef struct {
     MD5_CTX base;
 } bfd_md5_data_t;
 
+typedef struct {
+    SHA_CTX base;
+} bfd_sha1_data_t;
+
 bf_error bfd_bf_md5_state_new(bf_state_t **);
+bf_error bfd_bf_sha1_state_new(bf_state_t **);

@@ -39,7 +39,7 @@
 #include <pthread.h>
 #include <config.h>
 
-#define BF_MAX_BRUTE_PW_LEN 16
+#define BF_MAX_BRUTE_PW_LEN 64
 #define BF_DFLT_NO_THREADS 4
 
 #ifdef BF_USE_LOCKFILE

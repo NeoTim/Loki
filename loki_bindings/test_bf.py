@@ -49,6 +49,18 @@ obj.pre_data = "831b01001001000003000000000002000a05d940000000000002010a11360000
 obj.hash_data = "ce50d053749ef6cc91667788d9aafdc3".decode("hex")
 run_test(obj)
 
+print "*** BFD - MD5 ***"
+obj = bf.bfd_md5_bf()
+obj.pre_data = "20c4053000001001000010010000c3500000c350000000000218010000000004".decode("hex")
+obj.hash_data = "6b9c6391428a7175476436c7ccfb7338".decode("hex")
+run_test(obj)
+
+print "*** BFD - SHA1 ***"
+obj = bf.bfd_sha1_bf()
+obj.pre_data = "20c4053400001001000010010000c3500000c35000000000041c01000000047f".decode("hex")
+obj.hash_data = "46f075e931f5dbc0914c981dc074e60c56cef919".decode("hex")
+run_test(obj)
+
 print "*** TCPMD5 ***"
 obj = bf.tcpmd5_bf()
 obj.pre_data = "45c000401c8340000106fd05c0a86f0ac0a86f14d05d00b32ff1bc6400000000b0024000c6360000020405b41312ed37a465e55a8155ac1c953ce087f7c30000".decode("hex")

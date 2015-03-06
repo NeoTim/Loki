@@ -76,3 +76,43 @@ bf_error bfd_bf_md5_state_new(bf_state_t **state) {
         return error;
     return BF_SUCCESS;
 }
+
+static void bfd_bf_sha1_pre_hash_func(void *proto_data, const char *pre_hash_data, unsigned pre_hash_data_len) {
+    bfd_sha1_data_t *data = (bfd_sha1_data_t *) proto_data;    
+    SHA1_Init(&data->base);
+    SHA1_Update(&data->base, pre_hash_data, pre_hash_data_len);
+}
+
+static int bfd_bf_sha1_hash_func(void *proto_data, const char *secret, const char *hash_data, unsigned hash_data_len) {
+    bfd_sha1_data_t *data = (bfd_sha1_data_t *) proto_data;
+    SHA_CTX cur;
+    unsigned char digest[SHA_DIGEST_LENGTH];
+    
+    memcpy((void *) &cur, &data->base, sizeof(SHA_CTX));    
+    SHA1_Update(&cur, secret, SHA_DIGEST_LENGTH);
+    SHA1_Final(digest, &cur);
+    if(!memcmp(hash_data, digest, SHA_DIGEST_LENGTH))
+        return 1;
+    return 0;
+}
+
+bf_error bfd_bf_sha1_state_new(bf_state_t **state) {
+    bf_error error;
+    bfd_sha1_data_t *proto_data;
+    
+    if((error = bf_state_new(state)) > 0)
+        return error;
+    
+    proto_data = malloc(sizeof(bfd_sha1_data_t));
+    if(proto_data == NULL)
+        return BF_ERR_NO_MEM;
+    if((error = bf_set_proto_data(*state, (void *) proto_data, NULL)) > 0) {
+        free(proto_data);
+        return error;
+    }
+    if((error = bf_set_pre_hash_func(*state, bfd_bf_sha1_pre_hash_func)) > 0)
+        return error;
+    if((error = bf_set_hash_func(*state, bfd_bf_sha1_hash_func)) > 0)
+        return error;
+    return BF_SUCCESS;
+}
