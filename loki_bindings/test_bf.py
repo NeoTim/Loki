@@ -49,6 +49,18 @@ obj.pre_data = "831b01001001000003000000000002000a05d940000000000002010a11360000
 obj.hash_data = "ce50d053749ef6cc91667788d9aafdc3".decode("hex")
 run_test(obj)
 
+print "*** ISIS - HMAC-SHA1 ***"
+obj = bf.isis_hmac_sha1_bf()
+obj.pre_data = "831401001101000301192168201101001b004e000104034900018102cc8e8404c0a8ca00f00f0000000003192168201104000000030a17030001".decode("hex")
+obj.hash_data = "0a33e7acf138d0bfb2b197f331bbd8ae237e0465".decode("hex")
+run_test(obj)
+
+print "*** ISIS - HMAC-SHA256 ***"
+obj = bf.isis_hmac_sha256_bf()
+obj.pre_data = "831401001101000301192168201101001b005a000104034900018102cc8e8404c0a8ca00f00f0000000003192168201104000000030a23030002".decode("hex")
+obj.hash_data = "3082271800f8fab2976d57bb5d1d6e182189b9a2d542f48371da934f854acab9".decode("hex")
+run_test(obj)
+
 print "*** BFD - MD5 ***"
 obj = bf.bfd_md5_bf()
 obj.pre_data = "20c4053000001001000010010000c3500000c350000000000218010000000004".decode("hex")

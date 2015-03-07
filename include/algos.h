@@ -44,7 +44,8 @@
 # include <openssl/hmac.h>
 # include <openssl/evp.h>
 
-# define HMAC_MD5(a, b, c, d, e, f) HMAC(EVP_md5(), (a), (b), (c), (d), (e), (f));
+# define HMAC_MD5(a, b, c, d, e, f) HMAC(EVP_md5(), (a), (b), (c), (d), (e), (f))
+# define HMAC_SHA1(a, b, c, d, e, f) HMAC(EVP_sha1(), (a), (b), (c), (d), (e), (f))
 
 #else
 
@@ -54,6 +55,7 @@
 # include <algos/hmac_sha2.h>
 
 # define HMAC_MD5(a, b, c, d, e, f) hmac_md5((c), (d), (a), (b), (e))
+# define HMAC_SHA1(a, b, c, d, e, f) { sha1nfo ctx; sha1_initHmac(&ctx, (a), (b)); sha1_write(&ctx, (c), (d)); memcpy((e), sha1_resultHmac(&ctx), SHA_DIGEST_LENGTH); }
 
 #endif
 

@@ -306,11 +306,27 @@ cdef class ospf_hmac_sha512_bf(bf):
 
 cdef extern from "bf/isis.h":
     bf_error isis_bf_hmac_md5_state_new(bf_state_t **)
+    bf_error isis_bf_hmac_sha1_state_new(bf_state_t **)
+    bf_error isis_bf_hmac_sha256_state_new(bf_state_t **)
 
 cdef class isis_hmac_md5_bf(bf):
     def __cinit__(self):
         cdef bf_error err
         err = isis_bf_hmac_md5_state_new(&self.state)
+        if err > 0:
+            raise RuntimeError(self.error_to_str[err])
+
+cdef class isis_hmac_sha1_bf(bf):
+    def __cinit__(self):
+        cdef bf_error err
+        err = isis_bf_hmac_sha1_state_new(&self.state)
+        if err > 0:
+            raise RuntimeError(self.error_to_str[err])
+
+cdef class isis_hmac_sha256_bf(bf):
+    def __cinit__(self):
+        cdef bf_error err
+        err = isis_bf_hmac_sha256_state_new(&self.state)
         if err > 0:
             raise RuntimeError(self.error_to_str[err])
         

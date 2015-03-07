@@ -38,6 +38,8 @@
 typedef struct {
     const char *pdu;
     unsigned pdu_len;
-} isis_hmac_md5_data_t;
+} isis_hmac_data_t;
 
 bf_error isis_bf_hmac_md5_state_new(bf_state_t **);
+bf_error isis_bf_hmac_sha1_state_new(bf_state_t **);
+bf_error isis_bf_hmac_sha256_state_new(bf_state_t **);

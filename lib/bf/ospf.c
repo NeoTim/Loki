@@ -37,22 +37,22 @@
 
 #include <bf/ospf.h>
 
-const char apad[] = {   0x87, 0x8F, 0xE1, 0xF3,
-                        0x87, 0x8F, 0xE1, 0xF3,
-                        0x87, 0x8F, 0xE1, 0xF3,
-                        0x87, 0x8F, 0xE1, 0xF3,
-                        0x87, 0x8F, 0xE1, 0xF3,
-                        0x87, 0x8F, 0xE1, 0xF3,
-                        0x87, 0x8F, 0xE1, 0xF3,
-                        0x87, 0x8F, 0xE1, 0xF3,
-                        0x87, 0x8F, 0xE1, 0xF3,
-                        0x87, 0x8F, 0xE1, 0xF3,
-                        0x87, 0x8F, 0xE1, 0xF3,
-                        0x87, 0x8F, 0xE1, 0xF3,
-                        0x87, 0x8F, 0xE1, 0xF3,
-                        0x87, 0x8F, 0xE1, 0xF3,
-                        0x87, 0x8F, 0xE1, 0xF3,
-                        0x87, 0x8F, 0xE1, 0xF3 };
+const char ospf_apad[] = {  0x87, 0x8F, 0xE1, 0xF3,
+                            0x87, 0x8F, 0xE1, 0xF3,
+                            0x87, 0x8F, 0xE1, 0xF3,
+                            0x87, 0x8F, 0xE1, 0xF3,
+                            0x87, 0x8F, 0xE1, 0xF3,
+                            0x87, 0x8F, 0xE1, 0xF3,
+                            0x87, 0x8F, 0xE1, 0xF3,
+                            0x87, 0x8F, 0xE1, 0xF3,
+                            0x87, 0x8F, 0xE1, 0xF3,
+                            0x87, 0x8F, 0xE1, 0xF3,
+                            0x87, 0x8F, 0xE1, 0xF3,
+                            0x87, 0x8F, 0xE1, 0xF3,
+                            0x87, 0x8F, 0xE1, 0xF3,
+                            0x87, 0x8F, 0xE1, 0xF3,
+                            0x87, 0x8F, 0xE1, 0xF3,
+                            0x87, 0x8F, 0xE1, 0xF3 };
 
 static void ospf_bf_md5_pre_hash_func(void *proto_data, const char *pre_hash_data, unsigned pre_hash_data_len) {
     ospf_md5_data_t *data = (ospf_md5_data_t *) proto_data;
@@ -123,20 +123,19 @@ static int ospf_bf_hmac_sha1_hash_func(void *proto_data, const char *secret, con
     } else {
         SHA1_Init(&ctx);
         SHA1_Update(&ctx, secret, len);
-        SHA1_Final(result, &ctx);
-        memcpy(key, result, SHA_DIGEST_LENGTH);
+        SHA1_Final(key, &ctx);
     }
 
 #ifdef HAVE_LIBCRYPTO
     HMAC_CTX_init(&ctx2);
     HMAC_Init(&ctx2, key, SHA_DIGEST_LENGTH, EVP_sha1());
     HMAC_Update(&ctx2, data->data, data->data_len);
-    HMAC_Update(&ctx2, apad, SHA_DIGEST_LENGTH);
+    HMAC_Update(&ctx2, ospf_apad, SHA_DIGEST_LENGTH);
     HMAC_Final(&ctx2, result, &len);
 #else
     sha1_initHmac(&ctx2, key, SHA_DIGEST_LENGTH);
     sha1_write(&ctx2, data->data, data->data_len);
-    sha1_write(&ctx2, apad, SHA_DIGEST_LENGTH);
+    sha1_write(&ctx2, ospf_apad, SHA_DIGEST_LENGTH);
     memcpy(result, sha1_resultHmac(&ctx2), SHA_DIGEST_LENGTH);
 #endif
     if(!memcmp(hash_data, result, SHA_DIGEST_LENGTH))
@@ -186,20 +185,19 @@ static int ospf_bf_hmac_sha256_hash_func(void *proto_data, const char *secret, c
     } else {
         SHA256_Init(&ctx);
         SHA256_Update(&ctx, secret, len);
-        SHA256_Final(result, &ctx);
-        memcpy(key, result, SHA256_DIGEST_LENGTH);
+        SHA256_Final(key, &ctx);
     }
 
 #ifdef HAVE_LIBCRYPTO
     HMAC_CTX_init(&ctx2);
     HMAC_Init(&ctx2, key, SHA256_DIGEST_LENGTH, EVP_sha256());
     HMAC_Update(&ctx2, data->data, data->data_len);
-    HMAC_Update(&ctx2, apad, SHA256_DIGEST_LENGTH);
+    HMAC_Update(&ctx2, ospf_apad, SHA256_DIGEST_LENGTH);
     HMAC_Final(&ctx2, result, &len);
 #else
     hmac_sha256_init(&ctx2, key, SHA256_DIGEST_LENGTH);
     hmac_sha256_update(&ctx2, data->data, data->data_len);
-    hmac_sha256_update(&ctx2, apad, SHA256_DIGEST_LENGTH);
+    hmac_sha256_update(&ctx2, ospf_apad, SHA256_DIGEST_LENGTH);
     hmac_sha256_final(&ctx2, result, SHA256_DIGEST_LENGTH);
 #endif
     if(!memcmp(hash_data, result, SHA256_DIGEST_LENGTH))
@@ -249,20 +247,19 @@ static int ospf_bf_hmac_sha384_hash_func(void *proto_data, const char *secret, c
     } else {
         SHA384_Init(&ctx);
         SHA384_Update(&ctx, secret, len);
-        SHA384_Final(result, &ctx);
-        memcpy(key, result, SHA384_DIGEST_LENGTH);
+        SHA384_Final(key, &ctx);
     }
 
 #ifdef HAVE_LIBCRYPTO
     HMAC_CTX_init(&ctx2);
     HMAC_Init(&ctx2, key, SHA384_DIGEST_LENGTH, EVP_sha384());
     HMAC_Update(&ctx2, data->data, data->data_len);
-    HMAC_Update(&ctx2, apad, SHA384_DIGEST_LENGTH);
+    HMAC_Update(&ctx2, ospf_apad, SHA384_DIGEST_LENGTH);
     HMAC_Final(&ctx2, result, &len);
 #else
     hmac_sha384_init(&ctx2, key, SHA384_DIGEST_LENGTH);
     hmac_sha384_update(&ctx2, data->data, data->data_len);
-    hmac_sha384_update(&ctx2, apad, SHA384_DIGEST_LENGTH);
+    hmac_sha384_update(&ctx2, ospf_apad, SHA384_DIGEST_LENGTH);
     hmac_sha384_final(&ctx2, result, SHA384_DIGEST_LENGTH);
 #endif
     if(!memcmp(hash_data, result, SHA384_DIGEST_LENGTH))
@@ -312,20 +309,19 @@ static int ospf_bf_hmac_sha512_hash_func(void *proto_data, const char *secret, c
     } else {
         SHA512_Init(&ctx);
         SHA512_Update(&ctx, secret, len);
-        SHA512_Final(result, &ctx);
-        memcpy(key, result, SHA512_DIGEST_LENGTH);
+        SHA512_Final(key, &ctx);
     }
 
 #ifdef HAVE_LIBCRYPTO
     HMAC_CTX_init(&ctx2);
     HMAC_Init(&ctx2, key, SHA512_DIGEST_LENGTH, EVP_sha512());
     HMAC_Update(&ctx2, data->data, data->data_len);
-    HMAC_Update(&ctx2, apad, SHA512_DIGEST_LENGTH);
+    HMAC_Update(&ctx2, ospf_apad, SHA512_DIGEST_LENGTH);
     HMAC_Final(&ctx2, result, &len);
 #else
     hmac_sha512_init(&ctx2, key, SHA512_DIGEST_LENGTH);
     hmac_sha512_update(&ctx2, data->data, data->data_len);
-    hmac_sha512_update(&ctx2, apad, SHA512_DIGEST_LENGTH);
+    hmac_sha512_update(&ctx2, ospf_apad, SHA512_DIGEST_LENGTH);
     hmac_sha512_final(&ctx2, result, SHA512_DIGEST_LENGTH);
 #endif
     if(!memcmp(hash_data, result, SHA512_DIGEST_LENGTH))
