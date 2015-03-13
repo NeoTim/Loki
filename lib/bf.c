@@ -96,7 +96,7 @@ static short inc_brute_pw(char *cur, int pos, bf_mode mode) {
         cur[pos] = 65;
         return 1;
     }
-    else if(cur[pos] >= 57 && cur[pos] < 90) {
+    else if(cur[pos] >= 65 && cur[pos] < 90) {
         cur[pos]++;
         return 1;
     }
