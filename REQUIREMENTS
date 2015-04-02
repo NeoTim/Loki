@@ -14,6 +14,12 @@ dpkt        1.6             http://code.google.com/p/dpkt/
 ipy         0.70, 0.64		http://software.inl.fr/trac/trac.cgi/wiki/IPy http://pypi.python.org/pypi/IPy
 
 
+for IS-IS / OSPF topology displaing also needed:
+
+pygraphviz  1.2             http://pygraphviz.github.io/
+xdot        0.6             https://github.com/vhdirk/xdot.py
+
+
 === Linux ===
 
 - for firewalling an iptables needs to be installed an in the path
