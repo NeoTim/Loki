@@ -240,12 +240,28 @@ class isis_tlv(object):
     TYPE_IP6_INT_ADDRESS =  0xe8
     TYPE_IP6_INT_REACH =    0xec
     
+    type_to_str = { 0x01    :   "TYPE_AREA_ADDRESS",
+                    0x02    :   "TYPE_IS_REACH",
+                    0x03    :   "TYPE_ES_NEIGHBOUR",
+                    0x06    :   "TYPE_IS_NEIGHBOURS",
+                    0x08    :   "TYPE_PADDING",
+                    0x09    :   "TYPE_LSP_ENTRIES",
+                    0x0a    :   "TYPE_AUTHENTICATION",
+                    0x80    :   "TYPE_IP_INT_REACH",
+                    0x81    :   "TYPE_PROTOCOL_SUPPORT",
+                    0x84    :   "TYPE_IP_INT_ADDRESS",
+                    0x89    :   "TYPE_HOSTNAME",
+                    0xd3    :   "TYPE_RESTART_SIGNALING",
+                    0xe8    :   "TYPE_IP6_INT_ADDRESS",
+                    0xec    :   "TYPE_IP6_INT_REACH"
+                    }
+    
     def __init__(self, t=None, v=None):
         self.t = t
         self.v = v
     
     def __repr__(self):
-        return "ISIS-TLV t(%x) v(%s)" % (self.t, self.v.encode("hex"))
+        return "ISIS-TLV %s v(%s)" % (self.type_to_str[self.t], self.v.encode("hex"))
     
     def render(self, data=None):
         if data is None:
@@ -412,8 +428,9 @@ class isis_thread(threading.Thread):
     def refresh_lsps(self, level, tblock):
         #neighbors
         is_reach = "\x00" + struct.pack("!BBBB", 0x00, 0x80, 0x80, 0x80) + self.parent.sysid + "\x00"
-        for i in self.parent.neighbors:
-            is_reach += struct.pack("!BBBB", 0x00, 0x80, 0x80, 0x80) + self.parent.neighbors[i]["hello"].source_id + "\x00"
+        if not self.parent.neighbors is None:
+            for i in self.parent.neighbors:
+                is_reach += struct.pack("!BBBB", 0x00, 0x80, 0x80, 0x80) + self.parent.neighbors[i]["hello"].source_id + "\x00"
         es_neigh = struct.pack("!BBBB", 0x0a, 0x80, 0x80, 0x80)
         tlvs = [    isis_tlv(isis_tlv.TYPE_IS_REACH, is_reach),
                     isis_tlv(isis_tlv.TYPE_ES_NEIGHBOUR, es_neigh)
@@ -459,8 +476,7 @@ class isis_thread(threading.Thread):
             ip6_int_reach += "%s%s" % (struct.pack("!IBB", 0x0a, 0x0, int(self.parent.nets6[i]["mask"])),
                                        dnet.ip6_aton(self.parent.nets6[i]["net"])[:int(self.parent.nets6[i]["mask"])//8]
                                        )
-        if not self.parent.loopback6 is None:
-            ip6_int_reach += "%s%s" % (struct.pack("!IBB", 0x00, 0x0, 128),
+        ip6_int_reach += "%s%s" % (struct.pack("!IBB", 0x00, 0x0, 128),
                                        self.parent.loopback6
                                        )
         is_reach = "\x00"
@@ -546,59 +562,59 @@ class isis_thread(threading.Thread):
                                                 )
                     self.send_multicast(hello)
                     
-                if self.exchange and (self.init or self.parent.nets_changed or self.count % 600 == 0):
-                    self.refresh_lsps(lsp_level, tblock)              
-                    self.parent.nets_changed = False
-                    self.init = False
-                
-                if not len(self.parent.lsps) == 0 and self.count % 10 == 0:
-                    entries = []
-                    refresh_needed = False
-                    for i in self.parent.lsps:
-                        self.parent.lsps[i].lifetime -= 10
-                        if self.parent.lsps[i].lifetime <= 300:
-                            refresh_needed = True
-                        entries += [struct.pack("!H8sI2s",
-                                                self.parent.lsps[i].lifetime, 
-                                                self.parent.lsps[i].lsp_id,
-                                                self.parent.lsps[i].sequence,
-                                                self.parent.lsps[i].checksum)]
-                    #~ import pprint
-                    #~ print "#" * 80
-                    #~ pprint.pprint(self.parent.neighbors)
-                    #~ print "#" * 80
-                    if self.parent.lan_id == self.parent.sysid + "\x01":
-                        #we are DR
-                        for n in self.parent.neighbors:
-                            cur = self.parent.neighbors[n]
-                            rem = []
-                            for l in cur["lsps"]:
-                                lsp = cur["lsps"][l]["lsp"]
-                                if lsp.lifetime > 10:
-                                    lsp.lifetime -= 10
-                                else:
-                                    lsp.lifetime = 0
-                                    rem.append(l)
-                            for l in rem:
-                                del cur["lsps"][l]
-                                entries += [struct.pack("!H8sI2s", lsp.lifetime, lsp.lsp_id, lsp.sequence, lsp.checksum)]
-                        
-                        entries = "".join(sorted(set(entries)))
-                        tlvs = [ isis_tlv(isis_tlv.TYPE_LSP_ENTRIES, entries) ]
-                        if not self.parent.auth is None:
-                            tlvs = [self.parent.auth] + tlvs
-                        csnp = isis_pdu_complete_sequence(csnp_level,
-                                                          self.parent.sysid + "\x00",
-                                                          "\x00" * 8,
-                                                          "\xff" * 8,
-                                                          tlvs
-                                                          )
-                        ##CSNP only if DR
-                        self.send_multicast(csnp)
+                    if self.exchange and (self.init or self.parent.nets_changed or self.count % 600 == 0):
+                        self.refresh_lsps(lsp_level, tblock)              
+                        self.parent.nets_changed = False
+                        self.init = False
                     
-                    if refresh_needed:
-                        self.refresh_lsps(lsp_level, tblock)
-            
+                    if not len(self.parent.lsps) == 0 and self.count % 10 == 0:
+                        entries = []
+                        refresh_needed = False
+                        for i in self.parent.lsps:
+                            self.parent.lsps[i].lifetime -= 10
+                            if self.parent.lsps[i].lifetime <= 300:
+                                refresh_needed = True
+                            entries += [struct.pack("!H8sI2s",
+                                                    self.parent.lsps[i].lifetime, 
+                                                    self.parent.lsps[i].lsp_id,
+                                                    self.parent.lsps[i].sequence,
+                                                    self.parent.lsps[i].checksum)]
+                        #~ import pprint
+                        #~ print "#" * 80
+                        #~ pprint.pprint(self.parent.neighbors)
+                        #~ print "#" * 80
+                        if self.parent.lan_id == self.parent.sysid + "\x01":
+                            #we are DR
+                            for n in self.parent.neighbors:
+                                cur = self.parent.neighbors[n]
+                                rem = []
+                                for l in cur["lsps"]:
+                                    lsp = cur["lsps"][l]["lsp"]
+                                    if lsp.lifetime > 10:
+                                        lsp.lifetime -= 10
+                                    else:
+                                        lsp.lifetime = 0
+                                        rem.append(l)
+                                for l in rem:
+                                    del cur["lsps"][l]
+                                    entries += [struct.pack("!H8sI2s", lsp.lifetime, lsp.lsp_id, lsp.sequence, lsp.checksum)]
+                            
+                            entries = "".join(sorted(set(entries)))
+                            tlvs = [ isis_tlv(isis_tlv.TYPE_LSP_ENTRIES, entries) ]
+                            if not self.parent.auth is None:
+                                tlvs = [self.parent.auth] + tlvs
+                            csnp = isis_pdu_complete_sequence(csnp_level,
+                                                              self.parent.sysid + "\x00",
+                                                              "\x00" * 8,
+                                                              "\xff" * 8,
+                                                              tlvs
+                                                              )
+                            ##CSNP only if DR
+                            self.send_multicast(csnp)
+                        
+                        if refresh_needed:
+                            self.refresh_lsps(lsp_level, tblock)
+                
             if not self.running:
                 return
             self.count += 1
@@ -642,12 +658,14 @@ class mod_class(object):
         self.level = None
         self.area = None
         self.loopback = None
+        self.loopback6 = None
         self.sysid = "loki4u"
         self.hostname = "loki4u"
         self.priority = 0x40
         self.hold_time = 30
         self.auth_secret = None
         self.mac = "\x00\x00\x00\x00\x00\x00"
+        self.lsdb = {}
 
     def start_mod(self):
         self.thread = isis_thread(self)
@@ -669,10 +687,12 @@ class mod_class(object):
 
     def get_root(self):
         self.glade_xml = gtk.glade.XML(self.parent.data_dir + self.gladefile)
-        dic = { "on_hello_togglebutton_toggled" : self.on_hello_togglebutton_toggled,
-                "on_bf_button_clicked"          : self.on_bf_button_clicked,
-                "on_add_button_clicked"         : self.on_add_button_clicked,
-                "on_remove_button_clicked"      : self.on_remove_button_clicked,
+        dic = { "on_hello_togglebutton_toggled"     : self.on_hello_togglebutton_toggled,
+                "on_bf_button_clicked"              : self.on_bf_button_clicked,
+                "on_add_button_clicked"             : self.on_add_button_clicked,
+                "on_remove_button_clicked"          : self.on_remove_button_clicked,
+                "on_show_topology_button_clicked"   : self.on_show_topology_button_clicked,
+                "on_save_topology_button_clicked"   : self.on_save_topology_button_clicked,
             }
         self.glade_xml.signal_autoconnect(dic)
 
@@ -803,7 +823,8 @@ class mod_class(object):
                             auth = "None"
                         cur = {}
                         cur["hello"] = hello
-                        cur["iter"] = self.neighbor_treestore.append(None, [
+                        with gtk.gdk.lock:
+                            cur["iter"] = self.neighbor_treestore.append(None, [
                                                                         level + dnet.eth_ntoa(eth.src), 
                                                                         hello.source_id.encode("hex"), 
                                                                         str(get_tlv(hello, isis_tlv.TYPE_AREA_ADDRESS)),
@@ -838,10 +859,27 @@ class mod_class(object):
                         else:
                             auth = "None"
                         if lsp.lsp_id in cur["lsps"]:
-                            self.neighbor_treestore.remove(cur["lsps"][lsp.lsp_id]["iter"])
+                            with gtk.gdk.lock:
+                                self.neighbor_treestore.remove(cur["lsps"][lsp.lsp_id]["iter"])
                             del cur["lsps"][lsp.lsp_id]
                         new = {}
-                        new["iter"] = self.neighbor_treestore.append(cur["iter"], [
+                        lsp_id = lsp.lsp_id
+                        lsp_hname_tlv = get_tlv(lsp, isis_tlv.TYPE_HOSTNAME)
+                        if lsp_hname_tlv is None:
+                            if lsp_id[:-2] == '6c6f6b693475'.decode("hex"):
+                                lsp_hname = "loki4u"
+                            else:
+                                lsp_hname = None
+                        else:
+                            lsp_hname = lsp_hname_tlv.v
+                        lsp_new = { 'sequence' : lsp.sequence,
+                                    'csum'     : lsp.checksum,
+                                    'ip_reach' : [],
+                                    'ip6_reach': [],
+                                    'is_reach' : [],
+                                    }
+                        with gtk.gdk.lock:
+                            new["iter"] = self.neighbor_treestore.append(cur["iter"], [
                                                                         "LSP",
                                                                         lsp.lsp_id.encode("hex"),
                                                                         "",
@@ -855,7 +893,12 @@ class mod_class(object):
                         if not tlv is None:
                             prefixes = tlv.v
                             while len(prefixes) > 0:
-                                self.neighbor_treestore.append(new["iter"], [
+                                lsp_new['ip_reach'].append({ 'metric'   :   ord(prefixes[0]),
+                                                             'prefix'   :   dnet.ip_ntoa(prefixes[4:8]),
+                                                             'mask'     :   dnet.ip_ntoa(prefixes[8:12])
+                                                             })
+                                with gtk.gdk.lock:
+                                    self.neighbor_treestore.append(new["iter"], [
                                                                     "IP reachability",
                                                                     "%d" % ord(prefixes[0]),
                                                                     dnet.ip_ntoa(prefixes[4:8]) + " / " + dnet.ip_ntoa(prefixes[8:12]),
@@ -869,7 +912,12 @@ class mod_class(object):
                             prefixes = tlv.v
                             while len(prefixes) > 0:
                                 metric,prefixlen = struct.unpack("!IxB", prefixes[:6])
-                                self.neighbor_treestore.append(new["iter"], [
+                                lsp_new['ip6_reach'].append({ 'metric'   :   metric,
+                                                              'prefix'   :   dnet.ip6_ntoa(prefixes[6:6+(prefixlen//8)]+"\x00"*(16-(prefixlen//8))),
+                                                              'mask'     :   prefixlen
+                                                              })
+                                with gtk.gdk.lock:
+                                    self.neighbor_treestore.append(new["iter"], [
                                                                     "IP6 reachability",
                                                                     "%d" % metric,
                                                                     "%s/%d" % (dnet.ip6_ntoa(prefixes[6:6+(prefixlen//8)]+"\x00"*(16-(prefixlen//8))), prefixlen),
@@ -882,7 +930,11 @@ class mod_class(object):
                         if not tlv is None:
                             ises = tlv.v[1:]
                             while len(ises) > 0:
-                                self.neighbor_treestore.append(new["iter"], [
+                                lsp_new['is_reach'].append({ 'metric'   :   ord(ises[0]),
+                                                             'id'   :   ises[4:11].encode("hex")
+                                                             })
+                                with gtk.gdk.lock:
+                                    self.neighbor_treestore.append(new["iter"], [
                                                                     "IS reachability",
                                                                     "%d" % ord(ises[0]),
                                                                     ises[4:11].encode("hex"),
@@ -893,6 +945,24 @@ class mod_class(object):
                                 ises = ises[11:]
                         self.thread.exchange = True
                         self.thread.init = True
+                        
+                        host = lsp_id[:-2].encode("hex")
+                        lsp_id = "%d%d" % (ord(lsp_id[-1:]), ord(lsp_id[-2:-1]))
+                        if host in self.lsdb:
+                            if self.lsdb[host]['hostname'] is None and not lsp_hname is None:
+                                self.lsdb[host]['hostname'] = lsp_hname
+                            if lsp_id in self.lsdb[host]['links']:
+                                entry = self.lsdb[host]['links'][lsp_id]
+                                if lsp_new['sequence'] > entry['sequence']:
+                                    print "updating lsp %s:%s" % (host, lsp_id)
+                                    self.lsdb[host]['links'][lsp_id] = lsp_new
+                            else:
+                                self.lsdb[host]['links'][lsp_id] = lsp_new
+                        else:
+                            self.lsdb[host] = { 'hostname'  :   lsp_hname,
+                                                'links'     :  { lsp_id : lsp_new } 
+                                                }
+                        
                     
     #SIGNALS
     
@@ -915,10 +985,11 @@ class mod_class(object):
                 try:
                     self.loopback = dnet.ip_aton(i.strip())
                 except:
+                    self.loopback = None
                     try:
                         self.loopback6 = dnet.ip6_aton(i.strip())
                     except:
-                        pass
+                        self.loopback6 = None
             self.auth_secret = self.auth_data_entry.get_text()
             self.log("ISIS: Hello thread activated")
         else:
@@ -999,7 +1070,59 @@ class mod_class(object):
             model.set_value(iter, self.NEIGH_CRACK_ROW, "RUNNING")
             thread.start()
             self.bf[ident] = thread
-
+    
+    def create_topology(self):
+        try:
+            import pygraphviz
+        except:
+            return None
+        G = pygraphviz.AGraph(directed=True)
+        
+        for host in self.lsdb:
+            G.add_node(host, label='Router:\\n%s\\nID: %s' % (self.lsdb[host]["hostname"], host), shape="box", color="red")
+            for link in self.lsdb[host]['links']:
+                G.add_node(host+link, label="IS: %s" % host+link, shape="diamond")
+                G.add_edge(host, host+link, color="red", arrowhead=None, style="dashed")
+                lsp = self.lsdb[host]['links'][link]
+                for is_reach in lsp['is_reach']:
+                    G.add_node(is_reach['id'], label="IS:\\n%s" % is_reach['id'], shape="diamond")
+                    G.add_edge(host+link, is_reach['id'], weight=is_reach['metric'], label="%d" % is_reach['metric'])
+                for ip_reach in lsp['ip_reach']:
+                    G.add_node(ip_reach['prefix']+"/"+ip_reach['mask'], label="IPv4\\n%s\\n%s" % (ip_reach['prefix'],ip_reach['mask']))
+                    G.add_edge(host+link, ip_reach['prefix']+"/"+ip_reach['mask'], weight=ip_reach['metric'], label="%d" % ip_reach['metric'])
+                for ip6_reach in lsp['ip6_reach']:
+                    G.add_node(ip6_reach['prefix']+"/%d" % ip6_reach['mask'], label="IPv6\\n%s/%d" % (ip6_reach['prefix'], ip6_reach['mask']))
+                    G.add_edge(host+link, ip6_reach['prefix']+"/%d" % ip6_reach['mask'], weight=ip6_reach['metric'], label="%d" % ip6_reach['metric'])
+        return G
+    
+    def on_show_topology_button_clicked(self, btn):
+        try:
+            import xdot
+        except:
+            return
+        dwindow = xdot.DotWindow()
+        dwindow.set_dotcode(self.create_topology().to_string())
+        dwindow.show_all()
+    
+    def on_save_topology_button_clicked(self, btn):
+        dialog = gtk.FileChooserDialog(title="Save", parent=self.parent.window, action=gtk.FILE_CHOOSER_ACTION_SAVE, buttons=(gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_SAVE,gtk.RESPONSE_OK))
+        ffilter = gtk.FileFilter()
+        ffilter.set_name(".dot files")
+        ffilter.add_pattern("*.dot")
+        dialog.add_filter(ffilter)
+        ffilter = gtk.FileFilter()
+        ffilter.set_name(".png files")
+        ffilter.add_pattern("*.png")
+        dialog.add_filter(ffilter)
+        response = dialog.run()
+        if response == gtk.RESPONSE_OK:
+            _, ext = os.path.splitext(dialog.get_filename())
+            if ext.lower() == ".dot":
+                self.create_topology().write(dialog.get_filename())
+            elif ext.lower() == ".png":
+                self.create_topology().draw(dialog.get_filename(), 'png', 'dot')
+        dialog.destroy()
+    
     def get_config_dict(self):
         return {    "mtu" : {   "value" : self.mtu,
                                 "type" : "int",
