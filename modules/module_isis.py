@@ -954,7 +954,7 @@ class mod_class(object):
                             if lsp_id in self.lsdb[host]['links']:
                                 entry = self.lsdb[host]['links'][lsp_id]
                                 if lsp_new['sequence'] > entry['sequence']:
-                                    print "updating lsp %s:%s" % (host, lsp_id)
+                                    self.log("ISIS: updating lsp %s:%s" % (host, lsp_id))
                                     self.lsdb[host]['links'][lsp_id] = lsp_new
                             else:
                                 self.lsdb[host]['links'][lsp_id] = lsp_new
@@ -1081,7 +1081,7 @@ class mod_class(object):
         for host in self.lsdb:
             G.add_node(host, label='Router:\\n%s\\nID: %s' % (self.lsdb[host]["hostname"], host), shape="box", color="red")
             for link in self.lsdb[host]['links']:
-                G.add_node(host+link, label="IS: %s" % host+link, shape="diamond")
+                G.add_node(host+link, label="IS:\\n%s" % host+link, shape="diamond")
                 G.add_edge(host, host+link, color="red", arrowhead=None, style="dashed")
                 lsp = self.lsdb[host]['links'][link]
                 for is_reach in lsp['is_reach']:
@@ -1101,6 +1101,8 @@ class mod_class(object):
         except:
             return
         dwindow = xdot.DotWindow()
+        dwindow.base_title = "ISIS Topology"
+        dwindow.widget.filter = self.parent.dot_prog
         dwindow.set_dotcode(self.create_topology().to_string())
         dwindow.show_all()
     

@@ -1462,6 +1462,22 @@ class preference_window(gtk.Window):
         notebook.append_page(scrolledwindow, tab_label=gtk.Label("Bruteforce"))
         
         vbox = gtk.VBox(False, 0)
+        combo = gtk.combo_box_new_text()
+        for i in self.par.dot_prog_choices:
+            combo.insert_text(0, i)
+            if i == self.par.dot_prog:
+                combo.set_active(0)
+        combo.connect('changed', self.dot_callback)
+        frame = gtk.Frame("Graph Layout")
+        frame.add(combo)
+        vbox.pack_start(frame, expand=False, fill=False)
+        scrolledwindow = gtk.ScrolledWindow()
+        scrolledwindow.set_property("vscrollbar-policy", gtk.POLICY_AUTOMATIC)
+        scrolledwindow.set_property("hscrollbar-policy", gtk.POLICY_AUTOMATIC)
+        scrolledwindow.add_with_viewport(vbox)
+        notebook.append_page(scrolledwindow, tab_label=gtk.Label("Graph"))
+        
+        vbox = gtk.VBox(False, 0)
         vbox.pack_start(notebook, True, True, 0)
         buttonbox = gtk.HButtonBox()
         close = gtk.Button(gtk.STOCK_CLOSE)
@@ -1487,6 +1503,9 @@ class preference_window(gtk.Window):
                 traceback.print_exc(file=sys.stdout)
                 print '-'*60
             print "failed to open module %s" % module
+    
+    def dot_callback(self, combo):
+        self.par.dot_prog = combo.get_active_text()
     
     def wordlist_callback(self, button):
         self.par.wordlist = button.get_filename()

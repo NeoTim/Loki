@@ -280,6 +280,8 @@ class codename_loki(object):
         self.bruteforce = True
         self.bruteforce_full = False
         self.bruteforce_threads = 4
+        self.dot_prog = 'dot'
+        self.dot_prog_choices = [ 'circo', 'dot', 'fdp', 'neato', 'osage', 'sfdp', 'twopi' ]
 
         self.eth_checks = []
         self.ip_checks = []

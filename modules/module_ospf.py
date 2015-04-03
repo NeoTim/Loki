@@ -2006,6 +2006,8 @@ class mod_class(object):
         except:
             return
         dwindow = xdot.DotWindow()
+        dwindow.base_title = "OSPF Topology"
+        dwindow.widget.filter = self.parent.dot_prog
         dwindow.set_dotcode(self.create_topology().to_string())
         dwindow.show_all()
     
