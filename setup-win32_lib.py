@@ -22,7 +22,9 @@ bf_srcs = [ './loki_bindings/bf.pyx',
             './lib/bf/bfd.c',
             './lib/algos/md5.c',
             './lib/algos/hmac_md5.c',
-            './lib/algos/sha1.c' ]
+            './lib/algos/sha1.c',
+            './lib/algos/sha2.c',
+            './lib/algos/hmac_sha2.c', ]
 bf_incdirs = [ './include', os.environ['win32-pthread_inc'] ]
 bf_libdirs = [ os.environ['win32-pthread_lib'] ]
 bf_libs = [ 'ws2_32', 'pthreadVC2' ]
