@@ -168,7 +168,7 @@ static int isis_bf_hmac_sha256_hash_func(void *proto_data, const char *secret, c
 #ifdef HAVE_LIBCRYPTO
     HMAC_CTX ctx2;
 #else
-    sha1nfo ctx2;
+    hmac_sha256_ctx ctx2;
 #endif
     unsigned len = strlen(secret);
     
