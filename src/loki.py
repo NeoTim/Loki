@@ -621,7 +621,23 @@ class codename_loki(object):
             if os.geteuid() != 0:
                 self.error("You must be root to run this script.")
                 sys.exit(1)
-            import pcap
+            try:
+                import imp
+                fp, pathname, (suffix, _, _) = imp.find_module('pcap')
+                if suffix == '.so':     # this is pypcap
+                    fp.close()
+                    filename = os.path.dirname(pathname)+"/pcap.py"
+                    if os.path.exists(filename):
+                        with open(filename) as fp:
+                            pcap = imp.load_module("pcap", fp, filename, ('.py', 'U', 1))
+                else:
+                    import pcap
+                    if 'pcapObject' not in dir(pcap):
+                        self.error("Be sure you have pylibpcap and not pypcap installed")
+                        sys.exit(1)
+            except:
+                self.error("Please install pylibpcap to run Loki.")
+                sys.exit(1)
         elif PLATFORM == "Windows":
             try:
                 import pcap
