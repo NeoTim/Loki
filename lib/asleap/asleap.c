@@ -328,6 +328,7 @@ int getmschapbrute(struct asleap_data *asleap_ptr)
 	char password[MAX_NT_PASSWORD + 1];
 	unsigned char pwhash[MD4_SIGNATURE_SIZE];
 	unsigned long long count = 0;
+	char *s;
 
 	if (*asleap_ptr->wordfile == '-') {
 		wordlist = stdin;
@@ -340,7 +341,7 @@ int getmschapbrute(struct asleap_data *asleap_ptr)
 
 	while (!feof(wordlist)) {
 
-		fgets(password, MAX_NT_PASSWORD + 1, wordlist);
+		s = fgets(password, MAX_NT_PASSWORD + 1, wordlist);
 		/* Remove newline */
 		password[strlen(password) - 1] = 0;
 
@@ -378,7 +379,7 @@ int getmschappw(struct asleap_data *asleap_ptr)
 	struct hashpass_rec rec;
 	struct hashpassidx_rec idxrec;
 	char password_buf[MAX_NT_PASSWORD];
-	int passlen, recordlength, passwordlen, i;
+	int passlen, recordlength, passwordlen, i, ret;
 	FILE *buffp, *idxfp;
 
 	/* If the user passed an index file for our reference, fseek to
@@ -400,11 +401,11 @@ int getmschappw(struct asleap_data *asleap_ptr)
 			memset(&rec, 0, sizeof(rec));
 			memset(&password_buf, 0, sizeof(password_buf));
 			memset(&zpwhash, 0, sizeof(zpwhash));
-			fread(&rec.rec_size, sizeof(rec.rec_size), 1, buffp);
+			ret = fread(&rec.rec_size, sizeof(rec.rec_size), 1, buffp);
 			recordlength = abs(rec.rec_size);
 			passlen = (recordlength - (17));
-			fread(&password_buf, passlen, 1, buffp);
-			fread(&zpwhash, 16, 1, buffp);
+			ret = fread(&password_buf, passlen, 1, buffp);
+			ret = fread(&zpwhash, 16, 1, buffp);
 
 			/* Test last 2 characters of NT hash value of the current entry in the
 			   dictionary file.  If the 2 bytes of the NT hash don't
@@ -479,7 +480,7 @@ int getmschappw(struct asleap_data *asleap_ptr)
 
 			memset(&rec, 0, sizeof(rec));
 			memset(&password_buf, 0, sizeof(password_buf));
-			fread(&rec.rec_size, sizeof(rec.rec_size), 1, buffp);
+			ret = fread(&rec.rec_size, sizeof(rec.rec_size), 1, buffp);
 
 			/* The length of the password is the record size, 16 for the hash,
 			   1 for the record length byte. */
@@ -496,8 +497,8 @@ int getmschappw(struct asleap_data *asleap_ptr)
 
 			/* Gather the clear-text password from the dict+hash file,
 			   then grab the 16 byte hash */
-			fread(&password_buf, passwordlen, 1, buffp);
-			fread(&zpwhash, sizeof(zpwhash), 1, buffp);
+			ret = fread(&password_buf, passwordlen, 1, buffp);
+			ret = fread(&zpwhash, sizeof(zpwhash), 1, buffp);
 
 			/* Test the challenge and compare to our hash */
 			if (testchal(asleap_ptr, zpwhash) == 0) {
