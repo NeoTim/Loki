@@ -3,7 +3,7 @@
 
 AC_PREREQ([2.69])
 AC_INIT([loki], [0.3.0], [bugs@c0decafe.de])
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([subdir-objects])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([include/config.h:include/config.in])
 
@@ -48,21 +48,17 @@ AC_CHECK_HEADERS([sys/cdefs.h sys/time.h sys/socket.h linux/if.h linux/if_tun.h 
     #endif
 ]])
 
-AC_ARG_WITH([libssl],
-[AS_HELP_STRING([--with-libssl],
-   [ --with-libssl=DIR    use libssl in DIR (default is no)])],
+AC_ARG_WITH([ssl],
+[AS_HELP_STRING([--with-ssl],
+   [ --with-ssl=DIR  use lib{re}ssl in DIR (default is no)])],
 [ case "$withval" in
   yes)
     AC_CHECK_HEADERS([openssl/md5.h openssl/sha.h])
-    AC_CHECK_LIB(crypto, [MD5_Init])
-    AC_CHECK_LIB(crypto, [SHA1_Init])
-    AC_CHECK_LIB(crypto, [SHA256_Init])
-    AC_CHECK_LIB(crypto, [SHA384_Init])
-    AC_CHECK_LIB(crypto, [SHA512_Init])
-    CRYPTOLIB="-lcrypto"
+    AC_CHECK_LIB(crypto, [MD5_Init, SHA1_Init, SHA256_Init, SHA384_Init, SHA512_Init])
+    #~ CRYPTOLIB="-lcrypto"
     ;;
   *)
-    AC_MSG_CHECKING(for libssl)
+    AC_MSG_CHECKING(for lib{re}ssl)
     AC_MSG_RESULT($withval)
     #~ if test -f $withval/crypto/cryptodev.h; then
       #~ CRYPTLIB_INC="-I$withval"
@@ -73,8 +69,8 @@ AC_ARG_WITH([libssl],
   USE_LIBSSL=yes ],
 [USE_LIBSSL=no])
 
-AC_SUBST(CRYPTOINC)
-AC_SUBST(CRYPTOLIB)
+#~ AC_SUBST(CRYPTOINC)
+#~ AC_SUBST(CRYPTOLIB)
 
 dnl Checks for libpcap
 AC_MSG_CHECKING(for libpcap)
